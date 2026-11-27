@@ -15,6 +15,7 @@ import {
   ShoppingCart,
   Users,
   ScrollText,
+  KeyRound,
   type LucideIcon,
 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
@@ -39,6 +40,7 @@ const nav: { title: string; items: NavItem[] }[] = [
       { href: "/dashboard", label: "Gösterge paneli", icon: LayoutDashboard },
       { href: "/assistant", label: "Asistan", icon: Bot },
       { href: "/documents", label: "Dokümanlar", icon: FileText },
+      { href: "/tokens", label: "Erişim token'ları", icon: KeyRound },
     ],
   },
   {

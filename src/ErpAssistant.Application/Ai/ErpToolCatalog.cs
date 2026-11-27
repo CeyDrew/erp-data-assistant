@@ -1,8 +1,10 @@
+using System.Reflection;
 using System.Text.Json;
-using System.Text.Json.Serialization.Metadata;
 using Microsoft.Extensions.AI;
 
 namespace ErpAssistant.Application.Ai;
+
+public sealed record ToolDefinition(string Name, MethodInfo Method);
 
 /// <summary>
 /// Araçların tek tanımı. Hem sohbet asistanı (function calling) hem MCP sunucusu bu listeyi kullanır;
@@ -10,29 +12,31 @@ namespace ErpAssistant.Application.Ai;
 /// </summary>
 public static class ErpToolCatalog
 {
-    public static IReadOnlyList<AIFunction> Create(ErpTools tools, DocumentTools? documents = null)
-    {
-        var list = new List<AIFunction>
-        {
-            Make(tools.SatisOzeti, "satis_ozeti"),
-            Make(tools.EnCokSatanlar, "en_cok_satanlar"),
-            Make(tools.MusteriAra, "musteri_ara"),
-            Make(tools.MusteriSiparisleri, "musteri_siparisleri"),
-            Make(tools.StokDurumu, "stok_durumu"),
-            Make(tools.GecikenTahsilatlar, "geciken_tahsilatlar"),
-        };
-        if (documents is not null)
-            list.Add(Make(documents.DokumandaAra, "dokumanda_ara"));
-        return list;
-    }
-
-    public static readonly IReadOnlyList<string> Names =
+    public static readonly IReadOnlyList<ToolDefinition> Definitions =
     [
-        "satis_ozeti", "en_cok_satanlar", "musteri_ara", "musteri_siparisleri", "stok_durumu", "geciken_tahsilatlar",
-        "dokumanda_ara",
+        new("satis_ozeti", Method<ErpTools>(nameof(ErpTools.SatisOzeti))),
+        new("en_cok_satanlar", Method<ErpTools>(nameof(ErpTools.EnCokSatanlar))),
+        new("musteri_ara", Method<ErpTools>(nameof(ErpTools.MusteriAra))),
+        new("musteri_siparisleri", Method<ErpTools>(nameof(ErpTools.MusteriSiparisleri))),
+        new("stok_durumu", Method<ErpTools>(nameof(ErpTools.StokDurumu))),
+        new("geciken_tahsilatlar", Method<ErpTools>(nameof(ErpTools.GecikenTahsilatlar))),
+        new("dokumanda_ara", Method<DocumentTools>(nameof(DocumentTools.DokumandaAra))),
     ];
 
-    private static readonly JsonSerializerOptions Json = CreateJson();
+    /// <summary>Argüman okuma ayarları: Türkçe yazımlı enum değerlerini tolere eder.</summary>
+    public static readonly JsonSerializerOptions SerializerOptions = CreateJson();
+
+    public static IReadOnlyList<AIFunction> Create(ErpTools tools, DocumentTools? documents = null) =>
+        Definitions
+            .Select(d => (d, target: d.Method.DeclaringType == typeof(ErpTools) ? (object?)tools : documents))
+            .Where(x => x.target is not null)
+            .Select(x => AIFunctionFactory.Create(x.d.Method, x.target,
+                new AIFunctionFactoryOptions { Name = x.d.Name, SerializerOptions = SerializerOptions }))
+            .ToList();
+
+    private static MethodInfo Method<T>(string name) =>
+        typeof(T).GetMethod(name, BindingFlags.Public | BindingFlags.Instance)
+        ?? throw new InvalidOperationException($"{typeof(T).Name}.{name} bulunamadı");
 
     private static JsonSerializerOptions CreateJson()
     {
@@ -41,8 +45,4 @@ public static class ErpToolCatalog
         options.MakeReadOnly(populateMissingResolver: true);
         return options;
     }
-
-    private static AIFunction Make(Delegate method, string name) =>
-        AIFunctionFactory.Create(method, new AIFunctionFactoryOptions { Name = name, SerializerOptions = Json });
 }
-

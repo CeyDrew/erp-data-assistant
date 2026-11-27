@@ -81,6 +81,7 @@ public static class DependencyInjection
             });
 
         services.AddScoped<TokenService>();
+        services.AddScoped<PersonalAccessTokenService>();
         return services;
     }
 }

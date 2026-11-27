@@ -1,3 +1,4 @@
+extern alias mcp;
 using ErpAssistant.Infrastructure.Ai;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.TestHost;
@@ -43,6 +44,7 @@ public sealed class ErpApiFactory : WebApplicationFactory<Program>, IAsyncLifeti
         // Host'u şimdi kurarak migration ve tohumlamanın testlerden önce bitmesini sağlıyoruz.
         _ = Services;
         Admin = await this.CreateClientAsAsync(DemoUsers.Admin);
+        Mcp = new McpFactory(this);
     }
 
     public async Task<uint> DeadLetterCountAsync()
@@ -51,6 +53,22 @@ public sealed class ErpApiFactory : WebApplicationFactory<Program>, IAsyncLifeti
         await using var connection = await factory.CreateConnectionAsync();
         await using var channel = await connection.CreateChannelAsync();
         return (await channel.QueueDeclarePassiveAsync("documents.dead")).MessageCount;
+    }
+
+    /// <summary>Aynı veritabanı ve altyapıya bağlı MCP sunucusu.</summary>
+    public WebApplicationFactory<mcp::ErpAssistant.Mcp.McpMarker> Mcp { get; private set; } = null!;
+
+    /// <summary>API ve MCP sunucusunun ortak altyapı ayarları.</summary>
+    internal void ApplySharedSettings(IWebHostBuilder builder)
+    {
+        builder.UseEnvironment("Testing");
+        builder.UseSetting("ConnectionStrings:Erp", _connectionString);
+        builder.UseSetting("RabbitMq:Uri", _rabbit.GetConnectionString());
+        builder.UseSetting("Qdrant:Host", _qdrant.Hostname);
+        builder.UseSetting("Qdrant:Port", _qdrant.GetMappedPublicPort(6334).ToString());
+        builder.UseSetting("Storage:Path", _storage);
+        builder.UseSetting("Serilog:MinimumLevel:Default", "Warning");
+        builder.ConfigureTestServices(s => s.AddSingleton<IEmbeddingGeneratorFactory, HashingEmbeddingFactory>());
     }
 
     protected override void ConfigureWebHost(IWebHostBuilder builder)
@@ -83,6 +101,7 @@ public sealed class ErpApiFactory : WebApplicationFactory<Program>, IAsyncLifeti
 
     public new async Task DisposeAsync()
     {
+        await Mcp.DisposeAsync();
         await base.DisposeAsync();
         await Task.WhenAll(_sql.DisposeAsync().AsTask(), _rabbit.DisposeAsync().AsTask(), _qdrant.DisposeAsync().AsTask());
         try { Directory.Delete(_storage, true); } catch (IOException) { }
@@ -93,4 +112,9 @@ public sealed class ErpApiFactory : WebApplicationFactory<Program>, IAsyncLifeti
 public sealed class ApiCollection : ICollectionFixture<ErpApiFactory>
 {
     public const string Name = "api";
+}
+
+internal sealed class McpFactory(ErpApiFactory shared) : WebApplicationFactory<mcp::ErpAssistant.Mcp.McpMarker>
+{
+    protected override void ConfigureWebHost(IWebHostBuilder builder) => shared.ApplySharedSettings(builder);
 }

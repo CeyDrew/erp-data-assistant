@@ -31,6 +31,7 @@ public class ErpDbContext(DbContextOptions<ErpDbContext> options, ICurrentUser c
     public DbSet<DocumentChunk> DocumentChunks => Set<DocumentChunk>();
     public DbSet<AiQueryLog> AiQueryLogs => Set<AiQueryLog>();
     public DbSet<RefreshToken> RefreshTokens => Set<RefreshToken>();
+    public DbSet<PersonalAccessToken> PersonalAccessTokens => Set<PersonalAccessToken>();
 
     // Global query filter'lar bu iki özelliği okur. EF Core, DbContext üyelerine yapılan başvuruları
     // her sorguda parametre olarak yeniden değerlendirir; model bir kez derlenir, değer her istekte değişir.
