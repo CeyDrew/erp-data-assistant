@@ -1,4 +1,5 @@
 using ErpAssistant.Application.Abstractions;
+using ErpAssistant.Application.Field;
 using ErpAssistant.Infrastructure.Identity;
 using ErpAssistant.Infrastructure.Persistence;
 using ErpAssistant.Infrastructure.Persistence.Seeding;
@@ -23,6 +24,7 @@ public static class DependencyInjection
         services.AddDbContext<ErpDbContext>(options => options.UseSqlServer(connectionString,
             sql => sql.EnableRetryOnFailure(5)));
         services.AddScoped<IErpDbContext>(sp => sp.GetRequiredService<ErpDbContext>());
+        services.AddScoped<IFieldDatabase, FieldDatabase>();
 
         services.AddHttpContextAccessor();
         services.TryAddScoped<ICurrentUser, HttpContextCurrentUser>();
@@ -30,6 +32,7 @@ public static class DependencyInjection
         services.TryAddSingleton(TimeProvider.System);
         services.Configure<SeedOptions>(configuration.GetSection(SeedOptions.SectionName));
         services.AddScoped<ErpDataSeeder>();
+        services.AddScoped<FieldDataSeeder>();
 
         services
             .AddIdentityCore<AppUser>(o =>

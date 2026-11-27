@@ -20,6 +20,7 @@ public static class DatabaseInitializer
         await db.Database.MigrateAsync(ct);
 
         await scope.ServiceProvider.GetRequiredService<ErpDataSeeder>().SeedAsync(ct);
+        await scope.ServiceProvider.GetRequiredService<FieldDataSeeder>().SeedAsync(ct);
         await scope.ServiceProvider.GetRequiredService<IdentitySeeder>().SeedAsync(ct);
     }
 }

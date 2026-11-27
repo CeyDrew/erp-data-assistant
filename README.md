@@ -59,6 +59,7 @@ Ollama modelleri indirilir (`qwen2.5:7b` ≈ 4,7 GB, `bge-m3` ≈ 1,2 GB; yalnı
 | `yonetici@erp.local` | Yönetici | Her şey |
 | `temsilci@erp.local` | Satış temsilcisi | Yalnızca kendi müşterileri, onların sipariş ve faturaları |
 | `depo@erp.local` | Depo sorumlusu | Stok ve sevkiyat; fiyat, ciro ve fatura yok |
+| `surucu@erp.local` | Sürücü (mobil) | Yalnızca kendine atanmış teslimatlar |
 
 ### Bulut modeliyle çalıştırma
 
@@ -104,6 +105,25 @@ flowchart LR
 Clean Architecture: `Api, Worker, Mcp → Infrastructure → Application → Domain`. Ayrıntılar:
 [mimari](docs/architecture.md) · [ER diyagramı](docs/er-diagram.md) · [AI güvenlik kuralları](docs/ai-guardrails.md) ·
 [MCP](docs/mcp.md) · [performans ölçümleri](docs/performance.md) · [mimari kararlar (ADR)](docs/adr/)
+
+## Mobil saha API'si
+
+Satış temsilcisi ve teslimat sürücüsü için çevrimdışı öncelikli Flutter uygulaması
+([CeyDrew/field-sales-app](https://github.com/CeyDrew/field-sales-app)) bu API'nin `/api/v1/field` uç noktalarını kullanır:
+
+| Uç nokta | Ne yapar |
+|---|---|
+| `GET /field/sync/changes?since=&limit=` | Rowversion imleçli delta senkron (müşteri + bakiye, ürün, stok, sipariş, ziyaret, teslimat, tombstone) |
+| `POST /field/orders` | `Idempotency-Key` ile sipariş; fiyat değiştiyse 409, stok yetmeyen kalem eksik olarak işaretlenir |
+| `POST /field/sync/push` | Çevrimdışı kuyruk: ziyaret giriş/çıkış, teslimat tamam/başarısız, konum paketi; işlem başına idempotent |
+| `POST /field/deliveries/{id}/proof` | Teslimat fotoğrafı ve imza (tür, boyut ve içerik imzası kontrollü) |
+| `POST /field/devices` | Cihaz kaydı |
+
+Sürücüler (`surucu@erp.local`, `surucu2@erp.local`, `surucu3@erp.local`; şifre `Demo123!`) yalnızca kendilerine
+atanmış teslimatları görür; müşteri, fiyat ve diğer siparişler onlara açılmaz. Temsilci ya da sürücü senkron
+yaptığında bugünün planı yoksa demo planlayıcı 6 ziyaret / 8 teslimat oluşturur. Tasarım:
+[ADR 0008](docs/adr/0008-mobil-saha-modulu.md) (neden ayrı servis değil, `MIN_ACTIVE_ROWVERSION` imleci,
+idempotency tablosu, sürücü satır yetkisi).
 
 ## Asistanın araçları
 

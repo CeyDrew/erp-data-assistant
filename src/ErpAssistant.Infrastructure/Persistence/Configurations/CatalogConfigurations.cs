@@ -21,6 +21,8 @@ internal sealed class ProductConfiguration : IEntityTypeConfiguration<Product>
         b.Property(x => x.Name).HasMaxLength(160);
         b.Property(x => x.Unit).HasMaxLength(16);
         b.HasIndex(x => x.Sku).IsUnique();
+        b.Property(x => x.Barcode).HasMaxLength(13).IsUnicode(false);
+        b.HasIndex(x => x.Barcode).IsUnique().HasFilter("[Barcode] IS NOT NULL");
         b.HasIndex(x => x.CategoryId);
         b.HasIndex(x => x.Name);
         b.HasOne(x => x.Category).WithMany(c => c.Products).OnDelete(DeleteBehavior.Restrict);

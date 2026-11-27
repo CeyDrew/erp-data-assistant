@@ -30,6 +30,10 @@ internal sealed class OrderConfiguration : IEntityTypeConfiguration<Order>
         b.Property(x => x.OrderNumber).HasMaxLength(20);
         b.Property(x => x.Status).HasConversion<byte>();
         b.HasIndex(x => x.OrderNumber).IsUnique();
+        b.Property(x => x.Note).HasMaxLength(500);
+
+        // Mobil idempotency: aynı istemci isteği ikinci bir sipariş oluşturamaz (eşzamanlı yarışta da).
+        b.HasIndex(x => x.ClientRequestId).IsUnique().HasFilter("[ClientRequestId] IS NOT NULL");
 
         // Dönemsel satış özetleri: tarih aralığı taraması, kalan kolonlar index'ten okunur.
         b.HasIndex(x => x.OrderDate)

@@ -1,5 +1,6 @@
 using ErpAssistant.Application.Ai;
 using ErpAssistant.Application.Customers;
+using ErpAssistant.Application.Field;
 using ErpAssistant.Application.Inventory;
 using ErpAssistant.Application.Invoices;
 using ErpAssistant.Application.Orders;
@@ -22,6 +23,12 @@ public static class DependencyInjection
         services.AddScoped<OrderService>();
         services.AddScoped<InvoiceService>();
         services.AddScoped<ReportService>();
+
+        services.AddScoped<FieldDemoPlanner>();
+        services.AddScoped<FieldSyncService>();
+        services.AddScoped<FieldOrderService>();
+        services.AddScoped<FieldPushService>();
+        services.AddScoped<FieldDeviceService>();
 
         services.AddScoped<ToolCallRecorder>();
         services.AddScoped<ErpTools>();

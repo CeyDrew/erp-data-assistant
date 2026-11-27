@@ -23,6 +23,10 @@ namespace ErpAssistant.Infrastructure.Persistence.Migrations
 
             SqlServerModelBuilderExtensions.UseIdentityColumns(modelBuilder);
 
+            modelBuilder.HasSequence("FieldInvoiceNumbers");
+
+            modelBuilder.HasSequence("FieldOrderNumbers");
+
             modelBuilder.Entity("ErpAssistant.Domain.Ai.AiQueryLog", b =>
                 {
                     b.Property<int>("Id")
@@ -139,6 +143,11 @@ namespace ErpAssistant.Infrastructure.Persistence.Migrations
                         .HasPrecision(18, 2)
                         .HasColumnType("decimal(18,2)");
 
+                    b.Property<byte[]>("Version")
+                        .IsRequired()
+                        .ValueGeneratedOnAddOrUpdate()
+                        .HasColumnType("rowversion");
+
                     b.HasKey("Id");
 
                     b.HasIndex("InvoiceNumber")
@@ -146,6 +155,8 @@ namespace ErpAssistant.Infrastructure.Persistence.Migrations
 
                     b.HasIndex("OrderId")
                         .IsUnique();
+
+                    b.HasIndex("Version");
 
                     b.HasIndex("CustomerId", "IssueDate");
 
@@ -179,7 +190,14 @@ namespace ErpAssistant.Infrastructure.Persistence.Migrations
                     b.Property<DateTime>("PaidAt")
                         .HasColumnType("datetime2");
 
+                    b.Property<byte[]>("Version")
+                        .IsRequired()
+                        .ValueGeneratedOnAddOrUpdate()
+                        .HasColumnType("rowversion");
+
                     b.HasKey("Id");
+
+                    b.HasIndex("Version");
 
                     b.HasIndex("InvoiceId", "PaidAt");
 
@@ -193,6 +211,11 @@ namespace ErpAssistant.Infrastructure.Persistence.Migrations
                         .HasColumnType("int");
 
                     SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<string>("Barcode")
+                        .HasMaxLength(13)
+                        .IsUnicode(false)
+                        .HasColumnType("varchar(13)");
 
                     b.Property<int>("CategoryId")
                         .HasColumnType("int");
@@ -226,7 +249,16 @@ namespace ErpAssistant.Infrastructure.Persistence.Migrations
                         .HasPrecision(18, 2)
                         .HasColumnType("decimal(18,2)");
 
+                    b.Property<byte[]>("Version")
+                        .IsRequired()
+                        .ValueGeneratedOnAddOrUpdate()
+                        .HasColumnType("rowversion");
+
                     b.HasKey("Id");
+
+                    b.HasIndex("Barcode")
+                        .IsUnique()
+                        .HasFilter("[Barcode] IS NOT NULL");
 
                     b.HasIndex("CategoryId");
 
@@ -234,6 +266,8 @@ namespace ErpAssistant.Infrastructure.Persistence.Migrations
 
                     b.HasIndex("Sku")
                         .IsUnique();
+
+                    b.HasIndex("Version");
 
                     b.ToTable("Products");
                 });
@@ -352,6 +386,302 @@ namespace ErpAssistant.Infrastructure.Persistence.Migrations
                     b.ToTable("DocumentChunks");
                 });
 
+            modelBuilder.Entity("ErpAssistant.Domain.Field.Delivery", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<DateTime?>("DeliveredAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<int>("DriverId")
+                        .HasColumnType("int");
+
+                    b.Property<byte?>("FailureReason")
+                        .HasColumnType("tinyint");
+
+                    b.Property<double?>("Latitude")
+                        .HasColumnType("float");
+
+                    b.Property<double?>("Longitude")
+                        .HasColumnType("float");
+
+                    b.Property<string>("Note")
+                        .HasMaxLength(1000)
+                        .HasColumnType("nvarchar(1000)");
+
+                    b.Property<int>("OrderId")
+                        .HasColumnType("int");
+
+                    b.Property<DateOnly>("PlannedDate")
+                        .HasColumnType("date");
+
+                    b.Property<string>("ProofPhotoPath")
+                        .HasMaxLength(260)
+                        .HasColumnType("nvarchar(260)");
+
+                    b.Property<string>("RecipientName")
+                        .HasMaxLength(128)
+                        .HasColumnType("nvarchar(128)");
+
+                    b.Property<int>("SalesRepresentativeId")
+                        .HasColumnType("int");
+
+                    b.Property<int>("Sequence")
+                        .HasColumnType("int");
+
+                    b.Property<string>("SignaturePath")
+                        .HasMaxLength(260)
+                        .HasColumnType("nvarchar(260)");
+
+                    b.Property<byte>("Status")
+                        .HasColumnType("tinyint");
+
+                    b.Property<byte[]>("Version")
+                        .IsConcurrencyToken()
+                        .IsRequired()
+                        .ValueGeneratedOnAddOrUpdate()
+                        .HasColumnType("rowversion");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("OrderId");
+
+                    b.HasIndex("SalesRepresentativeId");
+
+                    b.HasIndex("Version");
+
+                    b.HasIndex("DriverId", "PlannedDate", "Sequence")
+                        .IsUnique();
+
+                    b.ToTable("Deliveries");
+                });
+
+            modelBuilder.Entity("ErpAssistant.Domain.Field.Device", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<string>("AppVersion")
+                        .IsRequired()
+                        .HasMaxLength(32)
+                        .HasColumnType("nvarchar(32)");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("InstallationId")
+                        .IsRequired()
+                        .HasMaxLength(64)
+                        .HasColumnType("nvarchar(64)");
+
+                    b.Property<DateTime>("LastSeenAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("Platform")
+                        .IsRequired()
+                        .HasMaxLength(16)
+                        .HasColumnType("nvarchar(16)");
+
+                    b.Property<string>("PushToken")
+                        .HasMaxLength(512)
+                        .HasColumnType("nvarchar(512)");
+
+                    b.Property<string>("UserId")
+                        .IsRequired()
+                        .HasMaxLength(450)
+                        .HasColumnType("nvarchar(450)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("UserId", "InstallationId")
+                        .IsUnique();
+
+                    b.ToTable("Devices");
+                });
+
+            modelBuilder.Entity("ErpAssistant.Domain.Field.FieldTombstone", b =>
+                {
+                    b.Property<long>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("bigint");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<long>("Id"));
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<int?>("DriverId")
+                        .HasColumnType("int");
+
+                    b.Property<string>("Entity")
+                        .IsRequired()
+                        .HasMaxLength(16)
+                        .HasColumnType("nvarchar(16)");
+
+                    b.Property<int>("EntityId")
+                        .HasColumnType("int");
+
+                    b.Property<int?>("SalesRepresentativeId")
+                        .HasColumnType("int");
+
+                    b.Property<byte[]>("Version")
+                        .IsRequired()
+                        .ValueGeneratedOnAddOrUpdate()
+                        .HasColumnType("rowversion");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("DriverId");
+
+                    b.HasIndex("SalesRepresentativeId");
+
+                    b.HasIndex("Version");
+
+                    b.ToTable("FieldTombstones");
+                });
+
+            modelBuilder.Entity("ErpAssistant.Domain.Field.IdempotencyRecord", b =>
+                {
+                    b.Property<Guid>("Key")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("Operation")
+                        .IsRequired()
+                        .HasMaxLength(32)
+                        .HasColumnType("nvarchar(32)");
+
+                    b.Property<string>("RequestHash")
+                        .IsRequired()
+                        .HasMaxLength(64)
+                        .HasColumnType("nchar(64)")
+                        .IsFixedLength();
+
+                    b.Property<string>("ResponseJson")
+                        .IsRequired()
+                        .HasMaxLength(-1)
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<int>("StatusCode")
+                        .HasColumnType("int");
+
+                    b.Property<string>("UserId")
+                        .IsRequired()
+                        .HasMaxLength(450)
+                        .HasColumnType("nvarchar(450)");
+
+                    b.HasKey("Key");
+
+                    b.HasIndex("CreatedAt");
+
+                    b.ToTable("IdempotencyRecords");
+                });
+
+            modelBuilder.Entity("ErpAssistant.Domain.Field.LocationPing", b =>
+                {
+                    b.Property<long>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("bigint");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<long>("Id"));
+
+                    b.Property<double?>("Accuracy")
+                        .HasColumnType("float");
+
+                    b.Property<Guid>("ClientId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<double>("Latitude")
+                        .HasColumnType("float");
+
+                    b.Property<double>("Longitude")
+                        .HasColumnType("float");
+
+                    b.Property<DateTime>("RecordedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("UserId")
+                        .IsRequired()
+                        .HasMaxLength(450)
+                        .HasColumnType("nvarchar(450)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("ClientId")
+                        .IsUnique();
+
+                    b.HasIndex("UserId", "RecordedAt");
+
+                    b.ToTable("LocationPings");
+                });
+
+            modelBuilder.Entity("ErpAssistant.Domain.Field.Visit", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<DateTime?>("CheckInAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<double?>("CheckInLatitude")
+                        .HasColumnType("float");
+
+                    b.Property<double?>("CheckInLongitude")
+                        .HasColumnType("float");
+
+                    b.Property<DateTime?>("CheckOutAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<int>("CustomerId")
+                        .HasColumnType("int");
+
+                    b.Property<string>("Note")
+                        .HasMaxLength(1000)
+                        .HasColumnType("nvarchar(1000)");
+
+                    b.Property<DateOnly>("PlannedDate")
+                        .HasColumnType("date");
+
+                    b.Property<int>("SalesRepresentativeId")
+                        .HasColumnType("int");
+
+                    b.Property<int>("Sequence")
+                        .HasColumnType("int");
+
+                    b.Property<byte>("Status")
+                        .HasColumnType("tinyint");
+
+                    b.Property<byte[]>("Version")
+                        .IsConcurrencyToken()
+                        .IsRequired()
+                        .ValueGeneratedOnAddOrUpdate()
+                        .HasColumnType("rowversion");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("CustomerId");
+
+                    b.HasIndex("Version");
+
+                    b.HasIndex("SalesRepresentativeId", "PlannedDate", "Sequence")
+                        .IsUnique();
+
+                    b.ToTable("Visits");
+                });
+
             modelBuilder.Entity("ErpAssistant.Domain.Inventory.StockBalance", b =>
                 {
                     b.Property<int>("ProductId")
@@ -397,10 +727,17 @@ namespace ErpAssistant.Infrastructure.Persistence.Migrations
                     b.Property<byte>("Type")
                         .HasColumnType("tinyint");
 
+                    b.Property<byte[]>("Version")
+                        .IsRequired()
+                        .ValueGeneratedOnAddOrUpdate()
+                        .HasColumnType("rowversion");
+
                     b.Property<int>("WarehouseId")
                         .HasColumnType("int");
 
                     b.HasKey("Id");
+
+                    b.HasIndex("Version");
 
                     b.HasIndex("WarehouseId");
 
@@ -468,6 +805,41 @@ namespace ErpAssistant.Infrastructure.Persistence.Migrations
                     b.ToTable("Departments");
                 });
 
+            modelBuilder.Entity("ErpAssistant.Domain.Organization.Driver", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<string>("City")
+                        .IsRequired()
+                        .HasMaxLength(64)
+                        .HasColumnType("nvarchar(64)");
+
+                    b.Property<string>("Email")
+                        .IsRequired()
+                        .HasMaxLength(256)
+                        .HasColumnType("nvarchar(256)");
+
+                    b.Property<string>("FullName")
+                        .IsRequired()
+                        .HasMaxLength(128)
+                        .HasColumnType("nvarchar(128)");
+
+                    b.Property<string>("Phone")
+                        .HasMaxLength(32)
+                        .HasColumnType("nvarchar(32)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("Email")
+                        .IsUnique();
+
+                    b.ToTable("Drivers");
+                });
+
             modelBuilder.Entity("ErpAssistant.Domain.Organization.SalesRepresentative", b =>
                 {
                     b.Property<int>("Id")
@@ -511,6 +883,10 @@ namespace ErpAssistant.Infrastructure.Persistence.Migrations
 
                     SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
 
+                    b.Property<string>("Address")
+                        .HasMaxLength(256)
+                        .HasColumnType("nvarchar(256)");
+
                     b.Property<string>("City")
                         .IsRequired()
                         .HasMaxLength(64)
@@ -532,6 +908,12 @@ namespace ErpAssistant.Infrastructure.Persistence.Migrations
                         .HasMaxLength(256)
                         .HasColumnType("nvarchar(256)");
 
+                    b.Property<double?>("Latitude")
+                        .HasColumnType("float");
+
+                    b.Property<double?>("Longitude")
+                        .HasColumnType("float");
+
                     b.Property<string>("Name")
                         .IsRequired()
                         .HasMaxLength(200)
@@ -549,6 +931,11 @@ namespace ErpAssistant.Infrastructure.Persistence.Migrations
                         .HasMaxLength(11)
                         .HasColumnType("nvarchar(11)");
 
+                    b.Property<byte[]>("Version")
+                        .IsRequired()
+                        .ValueGeneratedOnAddOrUpdate()
+                        .HasColumnType("rowversion");
+
                     b.HasKey("Id");
 
                     b.HasIndex("Code")
@@ -556,6 +943,8 @@ namespace ErpAssistant.Infrastructure.Persistence.Migrations
 
                     b.HasIndex("TaxNumber")
                         .IsUnique();
+
+                    b.HasIndex("Version");
 
                     b.HasIndex("SalesRepresentativeId", "Name");
 
@@ -570,8 +959,15 @@ namespace ErpAssistant.Infrastructure.Persistence.Migrations
 
                     SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
 
+                    b.Property<Guid?>("ClientRequestId")
+                        .HasColumnType("uniqueidentifier");
+
                     b.Property<int>("CustomerId")
                         .HasColumnType("int");
+
+                    b.Property<string>("Note")
+                        .HasMaxLength(500)
+                        .HasColumnType("nvarchar(500)");
 
                     b.Property<DateTime>("OrderDate")
                         .HasColumnType("datetime2");
@@ -594,10 +990,19 @@ namespace ErpAssistant.Infrastructure.Persistence.Migrations
                         .HasPrecision(18, 2)
                         .HasColumnType("decimal(18,2)");
 
+                    b.Property<byte[]>("Version")
+                        .IsRequired()
+                        .ValueGeneratedOnAddOrUpdate()
+                        .HasColumnType("rowversion");
+
                     b.Property<int>("WarehouseId")
                         .HasColumnType("int");
 
                     b.HasKey("Id");
+
+                    b.HasIndex("ClientRequestId")
+                        .IsUnique()
+                        .HasFilter("[ClientRequestId] IS NOT NULL");
 
                     b.HasIndex("OrderDate")
                         .HasDatabaseName("IX_Orders_OrderDate_Covering");
@@ -606,6 +1011,8 @@ namespace ErpAssistant.Infrastructure.Persistence.Migrations
 
                     b.HasIndex("OrderNumber")
                         .IsUnique();
+
+                    b.HasIndex("Version");
 
                     b.HasIndex("WarehouseId");
 
@@ -643,6 +1050,9 @@ namespace ErpAssistant.Infrastructure.Persistence.Migrations
                     b.Property<int>("Quantity")
                         .HasColumnType("int");
 
+                    b.Property<int>("ShortQuantity")
+                        .HasColumnType("int");
+
                     b.Property<decimal>("UnitPrice")
                         .HasPrecision(18, 2)
                         .HasColumnType("decimal(18,2)");
@@ -673,6 +1083,9 @@ namespace ErpAssistant.Infrastructure.Persistence.Migrations
                         .IsConcurrencyToken()
                         .HasMaxLength(256)
                         .HasColumnType("nvarchar(256)");
+
+                    b.Property<int?>("DriverId")
+                        .HasColumnType("int");
 
                     b.Property<string>("Email")
                         .HasMaxLength(256)
@@ -726,6 +1139,8 @@ namespace ErpAssistant.Infrastructure.Persistence.Migrations
                         .HasColumnType("nvarchar(256)");
 
                     b.HasKey("Id");
+
+                    b.HasIndex("DriverId");
 
                     b.HasIndex("NormalizedEmail")
                         .HasDatabaseName("EmailIndex");
@@ -1059,6 +1474,44 @@ namespace ErpAssistant.Infrastructure.Persistence.Migrations
                         .IsRequired();
 
                     b.Navigation("Document");
+                });
+
+            modelBuilder.Entity("ErpAssistant.Domain.Field.Delivery", b =>
+                {
+                    b.HasOne("ErpAssistant.Domain.Organization.Driver", "Driver")
+                        .WithMany()
+                        .HasForeignKey("DriverId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("ErpAssistant.Domain.Sales.Order", "Order")
+                        .WithMany()
+                        .HasForeignKey("OrderId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.Navigation("Driver");
+
+                    b.Navigation("Order");
+                });
+
+            modelBuilder.Entity("ErpAssistant.Domain.Field.Visit", b =>
+                {
+                    b.HasOne("ErpAssistant.Domain.Sales.Customer", "Customer")
+                        .WithMany()
+                        .HasForeignKey("CustomerId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("ErpAssistant.Domain.Organization.SalesRepresentative", "SalesRepresentative")
+                        .WithMany()
+                        .HasForeignKey("SalesRepresentativeId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.Navigation("Customer");
+
+                    b.Navigation("SalesRepresentative");
                 });
 
             modelBuilder.Entity("ErpAssistant.Domain.Inventory.StockMovement", b =>

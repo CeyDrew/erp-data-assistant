@@ -10,6 +10,8 @@ public static class DemoUsers
     public const string SalesRep = "temsilci@erp.local";
     public const string OtherSalesRep = "temsilci2@erp.local";
     public const string Warehouse = "depo@erp.local";
+    public const string Driver = "surucu@erp.local";
+    public const string OtherDriver = "surucu2@erp.local";
     public const string Password = "Demo123!";
 
     public static async Task<AuthResponse> LoginAsync(this HttpClient client, string email)
