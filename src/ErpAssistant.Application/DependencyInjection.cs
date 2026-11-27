@@ -1,3 +1,4 @@
+using ErpAssistant.Application.Ai;
 using ErpAssistant.Application.Customers;
 using ErpAssistant.Application.Inventory;
 using ErpAssistant.Application.Invoices;
@@ -21,6 +22,11 @@ public static class DependencyInjection
         services.AddScoped<OrderService>();
         services.AddScoped<InvoiceService>();
         services.AddScoped<ReportService>();
+
+        services.AddScoped<ToolCallRecorder>();
+        services.AddScoped<ErpTools>();
+        services.AddScoped<AssistantService>();
+        services.AddScoped<AiLogService>();
 
         return services;
     }

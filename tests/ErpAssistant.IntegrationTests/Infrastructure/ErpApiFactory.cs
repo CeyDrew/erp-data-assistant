@@ -1,4 +1,7 @@
+using ErpAssistant.Infrastructure.Ai;
 using Microsoft.AspNetCore.Hosting;
+using Microsoft.AspNetCore.TestHost;
+using Microsoft.Extensions.DependencyInjection;
 using Microsoft.AspNetCore.Mvc.Testing;
 using Microsoft.Data.SqlClient;
 using Testcontainers.MsSql;
@@ -45,6 +48,8 @@ public sealed class ErpApiFactory : WebApplicationFactory<Program>, IAsyncLifeti
         builder.UseSetting("Seed:SalesRepresentatives", "4");
         builder.UseSetting("Serilog:MinimumLevel:Default", "Warning");
         builder.UseSetting("RateLimiting:AuthPerMinute", "10000");
+        builder.UseSetting("RateLimiting:ChatPerMinute", "10000");
+        builder.ConfigureTestServices(s => s.AddSingleton<IChatClientFactory, ScriptedChatClientFactory>());
     }
 
     public new async Task DisposeAsync()

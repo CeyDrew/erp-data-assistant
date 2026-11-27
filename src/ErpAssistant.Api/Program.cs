@@ -4,6 +4,7 @@ using Asp.Versioning;
 using ErpAssistant.Api.Infrastructure;
 using ErpAssistant.Application;
 using ErpAssistant.Infrastructure;
+using ErpAssistant.Infrastructure.Ai;
 using ErpAssistant.Infrastructure.Persistence;
 using Scalar.AspNetCore;
 using Serilog;
@@ -24,16 +25,21 @@ try
 
     builder.Services.AddApplication();
     builder.Services.AddInfrastructure(builder.Configuration);
+    builder.Services.AddAi(builder.Configuration);
     builder.Services.AddJwtAuthentication(builder.Configuration);
     builder.Services.AddAuthorization(Policies.Configure);
 
     var authPerMinute = builder.Configuration.GetValue("RateLimiting:AuthPerMinute", 20);
+    var chatPerMinute = builder.Configuration.GetValue("RateLimiting:ChatPerMinute", 20);
     builder.Services.AddRateLimiter(o =>
     {
         o.RejectionStatusCode = StatusCodes.Status429TooManyRequests;
         o.AddPolicy("auth", ctx => RateLimitPartition.GetFixedWindowLimiter(
             ctx.Connection.RemoteIpAddress?.ToString() ?? "unknown",
             _ => new FixedWindowRateLimiterOptions { PermitLimit = authPerMinute, Window = TimeSpan.FromMinutes(1) }));
+        o.AddPolicy("chat", ctx => RateLimitPartition.GetFixedWindowLimiter(
+            ctx.User.FindFirst("sub")?.Value ?? ctx.Connection.RemoteIpAddress?.ToString() ?? "unknown",
+            _ => new FixedWindowRateLimiterOptions { PermitLimit = chatPerMinute, Window = TimeSpan.FromMinutes(1) }));
     });
 
     var webOrigins = builder.Configuration.GetSection("Cors:Origins").Get<string[]>() ?? ["http://localhost:3000"];
