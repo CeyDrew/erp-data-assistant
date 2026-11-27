@@ -17,6 +17,9 @@ public sealed class ErpApiFactory : WebApplicationFactory<Program>, IAsyncLifeti
 
     private string _connectionString = "";
 
+    /// <summary>Yönetici olarak oturum açmış istemci.</summary>
+    public HttpClient Admin { get; private set; } = null!;
+
     public async Task InitializeAsync()
     {
         await _sql.StartAsync();
@@ -28,6 +31,7 @@ public sealed class ErpApiFactory : WebApplicationFactory<Program>, IAsyncLifeti
 
         // Host'u şimdi kurarak migration ve tohumlamanın testlerden önce bitmesini sağlıyoruz.
         _ = Services;
+        Admin = await this.CreateClientAsAsync(DemoUsers.Admin);
     }
 
     protected override void ConfigureWebHost(IWebHostBuilder builder)
@@ -40,6 +44,7 @@ public sealed class ErpApiFactory : WebApplicationFactory<Program>, IAsyncLifeti
         builder.UseSetting("Seed:Orders", "800");
         builder.UseSetting("Seed:SalesRepresentatives", "4");
         builder.UseSetting("Serilog:MinimumLevel:Default", "Warning");
+        builder.UseSetting("RateLimiting:AuthPerMinute", "10000");
     }
 
     public new async Task DisposeAsync()

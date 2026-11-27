@@ -1,9 +1,12 @@
 using ErpAssistant.Application.Common;
 using ErpAssistant.Application.Invoices;
+using ErpAssistant.Api.Infrastructure;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
 namespace ErpAssistant.Api.Controllers;
 
+[Authorize(Policy = Policies.Financials)]
 public sealed class InvoicesController(InvoiceService invoices) : ApiControllerBase
 {
     [HttpGet]

@@ -1,3 +1,4 @@
+using ErpAssistant.Infrastructure.Identity;
 using ErpAssistant.Infrastructure.Persistence.Seeding;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
@@ -7,7 +8,7 @@ namespace ErpAssistant.Infrastructure.Persistence;
 
 public static class DatabaseInitializer
 {
-    /// <summary>Migration'ları uygular ve boşsa sentetik veriyi yükler.</summary>
+    /// <summary>Migration'ları uygular; boşsa sentetik veriyi ve demo kullanıcılarını yükler.</summary>
     public static async Task InitializeDatabaseAsync(this IServiceProvider services, CancellationToken ct = default)
     {
         await using var scope = services.CreateAsyncScope();
@@ -19,5 +20,6 @@ public static class DatabaseInitializer
         await db.Database.MigrateAsync(ct);
 
         await scope.ServiceProvider.GetRequiredService<ErpDataSeeder>().SeedAsync(ct);
+        await scope.ServiceProvider.GetRequiredService<IdentitySeeder>().SeedAsync(ct);
     }
 }

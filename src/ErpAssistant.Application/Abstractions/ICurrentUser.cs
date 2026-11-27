@@ -4,16 +4,20 @@ namespace ErpAssistant.Application.Abstractions;
 public interface ICurrentUser
 {
     bool IsAuthenticated { get; }
+
+    /// <summary>Migration, tohumlama ve worker gibi kullanıcısız iç işlemler; satır filtresi uygulanmaz.</summary>
+    bool IsSystem { get; }
+
     string? UserId { get; }
     string? UserName { get; }
     IReadOnlyCollection<string> Roles { get; }
 
-    /// <summary>Satış temsilcisi ise kendi temsilci kimliği; satır filtresi bununla çalışır.</summary>
+    /// <summary>Kullanıcı bir satış temsilcisine bağlıysa temsilci kimliği.</summary>
     int? SalesRepresentativeId { get; }
 
-    /// <summary>Doküman aramasında erişilebilir departman kodları; null = hepsi.</summary>
-    IReadOnlyCollection<string>? DepartmentCodes { get; }
-
     /// <summary>Fiyat, maliyet, ciro ve tahsilat görebilir mi? (Depo sorumlusu göremez.)</summary>
-    bool CanSeeFinancials { get; }
+    bool CanSeeFinancials => AccessPolicy.CanSeeFinancials(this);
+
+    /// <summary>Doküman aramasında erişilebilir departman kodları; null = hepsi.</summary>
+    IReadOnlyCollection<string>? DepartmentCodes => AccessPolicy.DepartmentsFor(this);
 }

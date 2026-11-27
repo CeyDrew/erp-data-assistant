@@ -1,3 +1,4 @@
+using ErpAssistant.Application.Abstractions;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Design;
 
@@ -14,6 +15,6 @@ internal sealed class DesignTimeDbContextFactory : IDesignTimeDbContextFactory<E
         var options = new DbContextOptionsBuilder<ErpDbContext>()
             .UseSqlServer(connectionString)
             .Options;
-        return new ErpDbContext(options);
+        return new ErpDbContext(options, SystemUser.Instance);
     }
 }

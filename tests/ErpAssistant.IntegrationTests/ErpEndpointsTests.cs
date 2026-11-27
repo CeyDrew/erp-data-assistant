@@ -16,7 +16,7 @@ namespace ErpAssistant.IntegrationTests;
 [Collection(ApiCollection.Name)]
 public sealed class ErpEndpointsTests(ErpApiFactory factory)
 {
-    private readonly HttpClient _client = factory.CreateClient();
+    private readonly HttpClient _client = factory.Admin;
 
     [Fact]
     public async Task Health_endpoint_is_healthy()

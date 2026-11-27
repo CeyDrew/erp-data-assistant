@@ -1,8 +1,8 @@
 using System.Text.Json.Serialization;
+using System.Threading.RateLimiting;
 using Asp.Versioning;
 using ErpAssistant.Api.Infrastructure;
 using ErpAssistant.Application;
-using ErpAssistant.Application.Abstractions;
 using ErpAssistant.Infrastructure;
 using ErpAssistant.Infrastructure.Persistence;
 using Scalar.AspNetCore;
@@ -24,7 +24,17 @@ try
 
     builder.Services.AddApplication();
     builder.Services.AddInfrastructure(builder.Configuration);
-    builder.Services.AddScoped<ICurrentUser, AnonymousCurrentUser>();
+    builder.Services.AddJwtAuthentication(builder.Configuration);
+    builder.Services.AddAuthorization(Policies.Configure);
+
+    var authPerMinute = builder.Configuration.GetValue("RateLimiting:AuthPerMinute", 20);
+    builder.Services.AddRateLimiter(o =>
+    {
+        o.RejectionStatusCode = StatusCodes.Status429TooManyRequests;
+        o.AddPolicy("auth", ctx => RateLimitPartition.GetFixedWindowLimiter(
+            ctx.Connection.RemoteIpAddress?.ToString() ?? "unknown",
+            _ => new FixedWindowRateLimiterOptions { PermitLimit = authPerMinute, Window = TimeSpan.FromMinutes(1) }));
+    });
 
     builder.Services.AddRouting(o => o.LowercaseUrls = true);
     builder.Services
@@ -63,6 +73,10 @@ try
 
     app.MapOpenApi();
     app.MapScalarApiReference(o => o.WithTitle("ERP Veri Asistanı API"));
+
+    app.UseAuthentication();
+    app.UseRateLimiter();
+    app.UseAuthorization();
 
     app.MapControllers();
     app.MapHealthChecks("/health");
