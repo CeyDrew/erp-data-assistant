@@ -22,4 +22,7 @@ public sealed class HttpContextCurrentUser(IHttpContextAccessor accessor) : ICur
 
     public int? SalesRepresentativeId =>
         int.TryParse(Principal?.FindFirstValue(ErpClaims.SalesRepresentativeId), out var id) ? id : null;
+
+    public int? DriverId =>
+        int.TryParse(Principal?.FindFirstValue(ErpClaims.DriverId), out var id) ? id : null;
 }

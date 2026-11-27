@@ -29,9 +29,13 @@ public sealed class IdentitySeeder(
         var reps = await db.SalesRepresentatives.AsNoTracking().OrderBy(r => r.Id).ToListAsync(ct);
         foreach (var rep in reps)
             await EnsureUserAsync(rep.Email, rep.FullName, Roles.SalesRep, rep.Id);
+
+        var drivers = await db.Drivers.AsNoTracking().OrderBy(d => d.Id).ToListAsync(ct);
+        foreach (var driver in drivers)
+            await EnsureUserAsync(driver.Email, driver.FullName, Roles.Driver, null, driver.Id);
     }
 
-    private async Task EnsureUserAsync(string email, string fullName, string role, int? repId)
+    private async Task EnsureUserAsync(string email, string fullName, string role, int? repId, int? driverId = null)
     {
         if (await users.FindByEmailAsync(email) is not null) return;
 
@@ -42,6 +46,7 @@ public sealed class IdentitySeeder(
             EmailConfirmed = true,
             FullName = fullName,
             SalesRepresentativeId = repId,
+            DriverId = driverId,
         };
         var result = await users.CreateAsync(user, DemoPassword);
         if (!result.Succeeded)

@@ -2,6 +2,7 @@ using ErpAssistant.Domain.Ai;
 using ErpAssistant.Domain.Billing;
 using ErpAssistant.Domain.Catalog;
 using ErpAssistant.Domain.Documents;
+using ErpAssistant.Domain.Field;
 using ErpAssistant.Domain.Inventory;
 using ErpAssistant.Domain.Organization;
 using ErpAssistant.Domain.Sales;
@@ -31,6 +32,13 @@ public interface IErpDbContext
     DbSet<Document> Documents { get; }
     DbSet<DocumentChunk> DocumentChunks { get; }
     DbSet<AiQueryLog> AiQueryLogs { get; }
+    DbSet<Driver> Drivers { get; }
+    DbSet<Visit> Visits { get; }
+    DbSet<Delivery> Deliveries { get; }
+    DbSet<LocationPing> LocationPings { get; }
+    DbSet<Device> Devices { get; }
+    DbSet<IdempotencyRecord> IdempotencyRecords { get; }
+    DbSet<FieldTombstone> FieldTombstones { get; }
 
     Task<int> SaveChangesAsync(CancellationToken cancellationToken = default);
 }

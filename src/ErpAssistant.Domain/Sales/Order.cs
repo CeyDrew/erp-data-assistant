@@ -26,6 +26,11 @@ public sealed class Order : Entity
     public DateTime? ShippedAt { get; set; }
     public decimal TotalAmount { get; set; }
 
+    /// <summary>Mobil istemcinin idempotency anahtarı; aynı istek iki kez sipariş oluşturamaz.</summary>
+    public Guid? ClientRequestId { get; set; }
+
+    public string? Note { get; set; }
+
     public List<OrderLine> Lines { get; set; } = [];
     public Invoice? Invoice { get; set; }
 

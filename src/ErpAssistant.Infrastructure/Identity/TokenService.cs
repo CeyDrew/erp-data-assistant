@@ -75,9 +75,9 @@ public sealed class TokenService(
     public async Task<UserInfo> DescribeAsync(AppUser user)
     {
         var roles = (await users.GetRolesAsync(user)).ToList();
-        ICurrentUser principal = new ClaimsCurrentUser(roles, user.SalesRepresentativeId);
+        ICurrentUser principal = new ClaimsCurrentUser(roles, user.SalesRepresentativeId, user.DriverId);
         return new UserInfo(user.Id, user.Email!, user.FullName, roles, user.SalesRepresentativeId,
-            principal.CanSeeFinancials, principal.DepartmentCodes);
+            principal.CanSeeFinancials, principal.DepartmentCodes, user.DriverId);
     }
 
     private async Task<AuthResponse> IssueAsync(AppUser user, Guid familyId, CancellationToken ct, RefreshToken? rotated = null)
@@ -95,6 +95,8 @@ public sealed class TokenService(
         claims.AddRange(info.Roles.Select(r => new Claim(ErpClaims.Role, r)));
         if (user.SalesRepresentativeId is { } repId)
             claims.Add(new Claim(ErpClaims.SalesRepresentativeId, repId.ToString()));
+        if (user.DriverId is { } driverId)
+            claims.Add(new Claim(ErpClaims.DriverId, driverId.ToString()));
 
         var accessExpires = now.AddMinutes(Options.AccessTokenMinutes);
         var accessToken = new JsonWebTokenHandler().CreateToken(new SecurityTokenDescriptor
@@ -142,7 +144,7 @@ public sealed class TokenService(
     private static string Hash(string token) =>
         Convert.ToHexString(SHA256.HashData(Encoding.UTF8.GetBytes(token)));
 
-    private sealed class ClaimsCurrentUser(IReadOnlyCollection<string> roles, int? repId) : ICurrentUser
+    private sealed class ClaimsCurrentUser(IReadOnlyCollection<string> roles, int? repId, int? driverId) : ICurrentUser
     {
         public bool IsAuthenticated => true;
         public bool IsSystem => false;
@@ -150,5 +152,6 @@ public sealed class TokenService(
         public string? UserName => null;
         public IReadOnlyCollection<string> Roles => roles;
         public int? SalesRepresentativeId => repId;
+        public int? DriverId => driverId;
     }
 }

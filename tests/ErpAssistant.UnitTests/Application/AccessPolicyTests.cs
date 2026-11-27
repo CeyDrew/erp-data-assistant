@@ -14,6 +14,41 @@ public class AccessPolicyTests
 
     private static ICurrentUser With(params string[] roles) => new User(true, false, roles, null);
 
+    private sealed record DriverUser(int? DriverId) : ICurrentUser
+    {
+        public bool IsAuthenticated => true;
+        public bool IsSystem => false;
+        public string? UserId => "d";
+        public string? UserName => "d";
+        public IReadOnlyCollection<string> Roles => [ErpAssistant.Application.Abstractions.Roles.Driver];
+        public int? SalesRepresentativeId => null;
+    }
+
+    [Fact]
+    public void Driver_sees_no_customer_or_order_rows_but_own_deliveries()
+    {
+        ICurrentUser driver = new DriverUser(5);
+
+        AccessPolicy.RowFilterFor(driver).Should().Be(AccessPolicy.NoAccess);
+        AccessPolicy.DriverFilterFor(driver).Should().Be(5);
+        driver.CanSeeFinancials.Should().BeFalse();
+    }
+
+    [Fact]
+    public void Driver_without_link_sees_no_deliveries()
+    {
+        AccessPolicy.DriverFilterFor(new DriverUser(null)).Should().Be(AccessPolicy.NoAccess);
+    }
+
+    [Fact]
+    public void Sales_rep_has_no_driver_scope_and_admin_is_unfiltered()
+    {
+        AccessPolicy.DriverFilterFor(new User(true, false, [Roles.SalesRep], 4)).Should().Be(AccessPolicy.NoAccess);
+        AccessPolicy.DriverFilterFor(With(Roles.Admin)).Should().BeNull();
+        AccessPolicy.DriverFilterFor(SystemUser.Instance).Should().BeNull();
+        AccessPolicy.DriverFilterFor(new User(false, false, [], null)).Should().Be(AccessPolicy.NoAccess);
+    }
+
     [Fact]
     public void Sales_rep_is_filtered_to_own_rows()
     {

@@ -15,6 +15,9 @@ public interface ICurrentUser
     /// <summary>Kullanıcı bir satış temsilcisine bağlıysa temsilci kimliği.</summary>
     int? SalesRepresentativeId { get; }
 
+    /// <summary>Kullanıcı bir teslimat sürücüsüne bağlıysa sürücü kimliği.</summary>
+    int? DriverId => null;
+
     /// <summary>Fiyat, maliyet, ciro ve tahsilat görebilir mi? (Depo sorumlusu göremez.)</summary>
     bool CanSeeFinancials => AccessPolicy.CanSeeFinancials(this);
 

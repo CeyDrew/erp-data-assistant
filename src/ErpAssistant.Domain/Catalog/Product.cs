@@ -9,6 +9,10 @@ public sealed class Product : Entity
     public int CategoryId { get; set; }
     public ProductCategory Category { get; set; } = null!;
     public required string Unit { get; set; }
+
+    /// <summary>EAN-13 barkod (mobilde kamerayla ürün arama).</summary>
+    public string? Barcode { get; set; }
+
     public decimal UnitPrice { get; set; }
     public decimal UnitCost { get; set; }
     public int ReorderLevel { get; set; }

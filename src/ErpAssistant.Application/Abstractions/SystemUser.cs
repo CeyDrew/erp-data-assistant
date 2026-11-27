@@ -11,4 +11,5 @@ public sealed class SystemUser : ICurrentUser
     public string? UserName => "system";
     public IReadOnlyCollection<string> Roles => [];
     public int? SalesRepresentativeId => null;
+    public int? DriverId => null;
 }

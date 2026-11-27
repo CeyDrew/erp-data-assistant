@@ -25,4 +25,4 @@ public sealed record AuthResponse(
 
 public sealed record UserInfo(
     string Id, string Email, string FullName, IReadOnlyList<string> Roles, int? SalesRepresentativeId, bool CanSeeFinancials,
-    IReadOnlyCollection<string>? DocumentDepartments);
+    IReadOnlyCollection<string>? DocumentDepartments, int? DriverId = null);

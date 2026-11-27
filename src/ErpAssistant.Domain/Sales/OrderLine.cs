@@ -17,6 +17,16 @@ public sealed class OrderLine : Entity
 
     public decimal LineTotal { get; set; }
 
+    /// <summary>Sipariş anında depoda karşılanamayan miktar. Kalem düşürülmez; eksik olarak işaretlenir.</summary>
+    public int ShortQuantity { get; set; }
+
+    public void FlagShortage(int shortQuantity)
+    {
+        if (shortQuantity < 0 || shortQuantity > Quantity)
+            throw new DomainException("Eksik miktar 0 ile kalem miktarı arasında olmalı.");
+        ShortQuantity = shortQuantity;
+    }
+
     public static decimal CalculateTotal(int quantity, decimal unitPrice, decimal discountRate) =>
         Math.Round(quantity * unitPrice * (1 - discountRate), 2, MidpointRounding.AwayFromZero);
 }

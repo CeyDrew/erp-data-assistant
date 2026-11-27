@@ -10,6 +10,7 @@ internal sealed class AppUserConfiguration : IEntityTypeConfiguration<AppUser>
     {
         b.Property(x => x.FullName).HasMaxLength(128);
         b.HasIndex(x => x.SalesRepresentativeId);
+        b.HasIndex(x => x.DriverId);
     }
 }
 

@@ -91,6 +91,8 @@ public sealed class PersonalAccessTokenService(ErpDbContext db, UserManager<AppU
         claims.AddRange((await users.GetRolesAsync(user)).Select(r => new Claim(ErpClaims.Role, r)));
         if (user.SalesRepresentativeId is { } rep)
             claims.Add(new Claim(ErpClaims.SalesRepresentativeId, rep.ToString()));
+        if (user.DriverId is { } driver)
+            claims.Add(new Claim(ErpClaims.DriverId, driver.ToString()));
 
         return new ClaimsPrincipal(new ClaimsIdentity(claims, scheme, "email", ErpClaims.Role));
     }
