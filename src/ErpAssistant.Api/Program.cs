@@ -36,6 +36,12 @@ try
             _ => new FixedWindowRateLimiterOptions { PermitLimit = authPerMinute, Window = TimeSpan.FromMinutes(1) }));
     });
 
+    var webOrigins = builder.Configuration.GetSection("Cors:Origins").Get<string[]>() ?? ["http://localhost:3000"];
+    builder.Services.AddCors(o => o.AddDefaultPolicy(p => p
+        .WithOrigins(webOrigins)
+        .AllowAnyHeader()
+        .AllowAnyMethod()));
+
     builder.Services.AddRouting(o => o.LowercaseUrls = true);
     builder.Services
         .AddControllers(o => o.Filters.Add<ValidationFilter>())
@@ -74,6 +80,7 @@ try
     app.MapOpenApi();
     app.MapScalarApiReference(o => o.WithTitle("ERP Veri Asistanı API"));
 
+    app.UseCors();
     app.UseAuthentication();
     app.UseRateLimiter();
     app.UseAuthorization();

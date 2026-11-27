@@ -157,7 +157,7 @@ public sealed class ReportService(IErpDbContext db, ICurrentUser user, TimeProvi
 
         if (!user.CanSeeFinancials)
         {
-            var ordersThisMonth = await db.Orders.CountAsync(o => o.OrderDate >= monthStart, ct);
+            var ordersThisMonth = await RevenueOrders(monthStart, today).CountAsync(ct);
             return new DashboardSummary(0, 0, ordersThisMonth, openOrders, 0, critical, [], top, []);
         }
 
