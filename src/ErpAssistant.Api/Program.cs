@@ -1,3 +1,5 @@
+using ErpAssistant.Infrastructure;
+using ErpAssistant.Infrastructure.Persistence;
 using Scalar.AspNetCore;
 using Serilog;
 
@@ -15,11 +17,15 @@ try
         .Enrich.FromLogContext()
         .WriteTo.Console());
 
+    builder.Services.AddInfrastructure(builder.Configuration);
     builder.Services.AddControllers();
     builder.Services.AddOpenApi();
     builder.Services.AddHealthChecks();
 
     var app = builder.Build();
+
+    if (app.Configuration.GetValue("Database:InitializeOnStartup", true))
+        await app.Services.InitializeDatabaseAsync();
 
     app.UseSerilogRequestLogging();
 
@@ -29,7 +35,7 @@ try
     app.MapControllers();
     app.MapHealthChecks("/health");
 
-    app.Run();
+    await app.RunAsync();
 }
 catch (Exception ex) when (ex is not HostAbortedException)
 {
