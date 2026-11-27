@@ -51,6 +51,7 @@ public static class AiServiceCollectionExtensions
                     c.AllowConcurrentInvocation = false;
                     c.IncludeDetailedErrors = false;
                 })
+                .UseOpenTelemetry(sp.GetRequiredService<ILoggerFactory>(), Observability.ObservabilityExtensions.AiSourceName)
                 .UseLogging(sp.GetRequiredService<ILoggerFactory>())
                 .Build(sp);
         });

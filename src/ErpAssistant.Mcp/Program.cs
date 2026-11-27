@@ -3,6 +3,7 @@ using ErpAssistant.Infrastructure;
 using ErpAssistant.Infrastructure.Ai;
 using ErpAssistant.Infrastructure.Documents;
 using ErpAssistant.Infrastructure.Identity;
+using ErpAssistant.Infrastructure.Observability;
 using ErpAssistant.Mcp;
 using Microsoft.AspNetCore.Authentication;
 using Microsoft.Extensions.DependencyInjection;
@@ -17,6 +18,7 @@ builder.Host.UseSerilog((context, services, configuration) => configuration
     .Enrich.FromLogContext()
     .WriteTo.Console());
 
+builder.AddObservability("erp-mcp");
 builder.Services.AddApplication();
 builder.Services.AddInfrastructure(builder.Configuration);
 builder.Services.AddAi(builder.Configuration);
@@ -34,7 +36,7 @@ builder.Services
     .WithTools(McpToolRegistration.CreateTools())
     .WithRequestFilters(f => f.AddCallToolFilter(McpToolRegistration.LogCalls));
 
-builder.Services.AddHealthChecks();
+builder.Services.AddErpHealthChecks(documents: true, ai: false);
 
 var app = builder.Build();
 
@@ -42,7 +44,7 @@ app.UseAuthentication();
 app.UseAuthorization();
 
 app.MapMcp("/mcp").RequireAuthorization();
-app.MapHealthChecks("/health");
+app.MapErpHealthChecks();
 
 await app.RunAsync();
 

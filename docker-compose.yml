@@ -1,5 +1,27 @@
 name: erp-assistant
 
+# Tek komutla tüm sistem:  docker compose up -d --build
+# NVIDIA GPU varsa:        docker compose -f docker-compose.yml -f docker-compose.gpu.yml up -d --build
+# Bulut modeli için:       AI_PROVIDER=Anthropic ANTHROPIC_API_KEY=... docker compose up -d --build
+
+x-dotnet-env: &dotnet-env
+  ASPNETCORE_ENVIRONMENT: Development
+  ConnectionStrings__Erp: "Server=mssql;Database=ErpAssistant;User Id=sa;Password=${MSSQL_SA_PASSWORD:-Erp_Asistan_2026!};TrustServerCertificate=True"
+  RabbitMq__Uri: amqp://guest:guest@rabbitmq:5672
+  Qdrant__Host: qdrant
+  Qdrant__Port: "6334"
+  Storage__Path: /data/documents
+  Ai__Provider: ${AI_PROVIDER:-Ollama}
+  Ai__EmbeddingProvider: ${AI_EMBEDDING_PROVIDER:-Ollama}
+  Ai__Ollama__Endpoint: http://ollama:11434
+  Ai__Ollama__ChatModel: ${OLLAMA_CHAT_MODEL:-qwen2.5:7b}
+  Ai__Ollama__EmbeddingModel: ${OLLAMA_EMBEDDING_MODEL:-bge-m3}
+  Ai__OpenAI__ApiKey: ${OPENAI_API_KEY:-}
+  Ai__Gemini__ApiKey: ${GEMINI_API_KEY:-}
+  Ai__Anthropic__ApiKey: ${ANTHROPIC_API_KEY:-}
+  OTEL_EXPORTER_OTLP_ENDPOINT: http://aspire-dashboard:18889
+  OTEL_EXPORTER_OTLP_PROTOCOL: grpc
+
 services:
   mssql:
     image: mcr.microsoft.com/mssql/server:2022-latest
@@ -44,22 +66,99 @@ services:
     volumes:
       - ollama-data:/root/.ollama
 
+  # Modelleri bir kez indirir (qwen2.5:7b ≈ 4,7 GB, bge-m3 ≈ 1,2 GB); sonraki açılışlarda volume'dan gelir.
+  ollama-init:
+    image: ollama/ollama:latest
+    environment:
+      OLLAMA_HOST: ollama:11434
+    entrypoint: ["sh", "-c", "ollama pull ${OLLAMA_CHAT_MODEL:-qwen2.5:7b} && ollama pull ${OLLAMA_EMBEDDING_MODEL:-bge-m3}"]
+    depends_on:
+      - ollama
+    restart: "no"
+
+  # OpenTelemetry izleri, metrikler ve günlükler: http://localhost:18888
+  aspire-dashboard:
+    image: mcr.microsoft.com/dotnet/aspire-dashboard:9.5
+    environment:
+      ASPIRE_DASHBOARD_UNSECURED_ALLOW_ANONYMOUS: "true"
+    ports:
+      - "18888:18888"
+
   api:
     build:
       context: .
-      dockerfile: src/ErpAssistant.Api/Dockerfile
+      dockerfile: src/Dockerfile
+      args:
+        PROJECT: ErpAssistant.Api
     environment:
-      ASPNETCORE_ENVIRONMENT: Development
-      ConnectionStrings__Erp: "Server=mssql;Database=ErpAssistant;User Id=sa;Password=${MSSQL_SA_PASSWORD:-Erp_Asistan_2026!};TrustServerCertificate=True"
+      <<: *dotnet-env
+      OTEL_SERVICE_NAME: erp-api
+      SampleDocuments__Path: /samples/documents
+      Cors__Origins__0: http://localhost:3000
     ports:
       - "5080:8080"
+    volumes:
+      - documents:/data/documents
+      - ./samples:/samples:ro
     depends_on:
       mssql:
         condition: service_healthy
       rabbitmq:
         condition: service_healthy
+      qdrant:
+        condition: service_started
+
+  worker:
+    build:
+      context: .
+      dockerfile: src/Dockerfile
+      args:
+        PROJECT: ErpAssistant.Worker
+    environment:
+      <<: *dotnet-env
+      OTEL_SERVICE_NAME: erp-worker
+    volumes:
+      - documents:/data/documents
+    depends_on:
+      api:
+        condition: service_started
+      rabbitmq:
+        condition: service_healthy
+      ollama-init:
+        condition: service_completed_successfully
+    restart: unless-stopped
+
+  mcp:
+    build:
+      context: .
+      dockerfile: src/Dockerfile
+      args:
+        PROJECT: ErpAssistant.Mcp
+    environment:
+      <<: *dotnet-env
+      OTEL_SERVICE_NAME: erp-mcp
+      Urls: http://+:8080
+    ports:
+      - "5090:8080"
+    volumes:
+      - documents:/data/documents
+    depends_on:
+      api:
+        condition: service_started
+
+  web:
+    build:
+      context: web
+      args:
+        NEXT_PUBLIC_API_URL: http://localhost:5080
+        NEXT_PUBLIC_MCP_URL: http://localhost:5090/mcp
+    ports:
+      - "3000:3000"
+    depends_on:
+      - api
 
 volumes:
   mssql-data:
   qdrant-data:
   ollama-data:
+  documents:

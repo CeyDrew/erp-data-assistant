@@ -59,6 +59,10 @@ internal sealed class OrderLineConfiguration : IEntityTypeConfiguration<OrderLin
         // "En çok satanlar": ürün bazında miktar ve tutar toplamı.
         b.HasIndex(x => x.ProductId).IncludeProperties(x => new { x.OrderId, x.Quantity, x.LineTotal });
 
+        // Tarih aralığındaki siparişlerin kalemleri: FK index'i kapsayıcı yapıldı. Ölçüm (docs/performance.md):
+        // "geçen ayın en çok satanları" 421 → 211 mantıksal okuma.
+        b.HasIndex(x => x.OrderId).IncludeProperties(x => new { x.ProductId, x.Quantity, x.LineTotal });
+
         b.HasOne(x => x.Product).WithMany().OnDelete(DeleteBehavior.Restrict);
     }
 }

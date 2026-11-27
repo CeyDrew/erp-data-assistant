@@ -6,6 +6,7 @@ using ErpAssistant.Application;
 using ErpAssistant.Infrastructure;
 using ErpAssistant.Infrastructure.Ai;
 using ErpAssistant.Infrastructure.Documents;
+using ErpAssistant.Infrastructure.Observability;
 using ErpAssistant.Infrastructure.Persistence;
 using Scalar.AspNetCore;
 using Serilog;
@@ -24,6 +25,7 @@ try
         .Enrich.FromLogContext()
         .WriteTo.Console());
 
+    builder.AddObservability("erp-api");
     builder.Services.AddApplication();
     builder.Services.AddInfrastructure(builder.Configuration);
     builder.Services.AddAi(builder.Configuration);
@@ -75,7 +77,7 @@ try
     builder.Services.AddExceptionHandler<ApiExceptionHandler>();
 
     builder.Services.AddOpenApi("v1");
-    builder.Services.AddHealthChecks();
+    builder.Services.AddErpHealthChecks(documents: true, ai: true);
 
     var app = builder.Build();
 
@@ -95,7 +97,7 @@ try
     app.UseAuthorization();
 
     app.MapControllers();
-    app.MapHealthChecks("/health");
+    app.MapErpHealthChecks();
 
     await app.RunAsync();
 }

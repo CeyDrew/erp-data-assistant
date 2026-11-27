@@ -651,6 +651,8 @@ namespace ErpAssistant.Infrastructure.Persistence.Migrations
 
                     b.HasIndex("OrderId");
 
+                    SqlServerIndexBuilderExtensions.IncludeProperties(b.HasIndex("OrderId"), new[] { "ProductId", "Quantity", "LineTotal" });
+
                     b.HasIndex("ProductId");
 
                     SqlServerIndexBuilderExtensions.IncludeProperties(b.HasIndex("ProductId"), new[] { "OrderId", "Quantity", "LineTotal" });

@@ -1,4 +1,5 @@
 using System.Diagnostics;
+using ErpAssistant.Application.Common;
 using ErpAssistant.Application.Documents;
 using ErpAssistant.Domain.Documents;
 using ErpAssistant.Infrastructure.Persistence;
@@ -23,6 +24,8 @@ public sealed class DocumentProcessor(
     public async Task ProcessAsync(int documentId, CancellationToken ct)
     {
         var sw = Stopwatch.StartNew();
+        using var activity = ErpTelemetry.Source.StartActivity("document process");
+        activity?.SetTag("erp.document.id", documentId);
         var document = await db.Documents.Include(d => d.Department).FirstOrDefaultAsync(d => d.Id == documentId, ct);
         if (document is null)
         {
@@ -70,6 +73,9 @@ public sealed class DocumentProcessor(
         document.MarkReady(indexed.Count, clock.GetUtcNow().UtcDateTime);
         await db.SaveChangesAsync(ct);
 
+        activity?.SetTag("erp.document.chunks", indexed.Count);
+        ErpTelemetry.DocumentsProcessed.Add(1, new KeyValuePair<string, object?>("outcome", "ready"));
+        ErpTelemetry.DocumentDuration.Record(sw.Elapsed.TotalMilliseconds);
         logger.LogInformation("Doküman {Id} ({File}) işlendi: {Pages} sayfa, {Chunks} parça, {Ms} ms",
             document.Id, document.FileName, pages.Count, indexed.Count, sw.ElapsedMilliseconds);
     }
@@ -79,6 +85,7 @@ public sealed class DocumentProcessor(
         var document = await db.Documents.FirstOrDefaultAsync(d => d.Id == documentId, ct);
         if (document is null) return;
         document.MarkFailed(error);
+        ErpTelemetry.DocumentsProcessed.Add(1, new KeyValuePair<string, object?>("outcome", "failed"));
         await db.SaveChangesAsync(ct);
     }
 }

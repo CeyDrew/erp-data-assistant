@@ -3,6 +3,7 @@ using ErpAssistant.Application.Abstractions;
 using ErpAssistant.Infrastructure;
 using ErpAssistant.Infrastructure.Ai;
 using ErpAssistant.Infrastructure.Documents;
+using ErpAssistant.Infrastructure.Observability;
 using Serilog;
 
 // Doküman işleme worker'ı: RabbitMQ'dan mesaj alır, metni ayıklar, parçalar, embedding üretir ve Qdrant'a yazar.
@@ -12,6 +13,8 @@ builder.Services.AddSerilog((services, configuration) => configuration
     .ReadFrom.Configuration(builder.Configuration)
     .Enrich.FromLogContext()
     .WriteTo.Console());
+
+builder.AddObservability("erp-worker");
 
 // Worker kullanıcısızdır; satır filtresi uygulanmaz.
 builder.Services.AddSingleton<ICurrentUser>(SystemUser.Instance);
