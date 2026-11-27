@@ -112,7 +112,7 @@ public sealed class ToolSelectionEval(ITestOutputHelper output)
         return expected switch
         {
             string s when s.StartsWith('~') => new CultureInfo("tr-TR").CompareInfo.IndexOf(text, s[1..], CompareOptions.IgnoreCase) >= 0,
-            string s => string.Equals(text, s, StringComparison.OrdinalIgnoreCase),
+            string s => TolerantEnumConverterFactory.Normalize(text) == TolerantEnumConverterFactory.Normalize(s),
             bool b => string.Equals(text, b ? "true" : "false", StringComparison.OrdinalIgnoreCase),
             int n => int.TryParse(text, out var v) && v == n,
             _ => false,

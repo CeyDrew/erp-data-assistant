@@ -1,3 +1,5 @@
+using System.Text.Json;
+using System.Text.Json.Serialization.Metadata;
 using Microsoft.Extensions.AI;
 
 namespace ErpAssistant.Application.Ai;
@@ -30,7 +32,17 @@ public static class ErpToolCatalog
         "dokumanda_ara",
     ];
 
+    private static readonly JsonSerializerOptions Json = CreateJson();
+
+    private static JsonSerializerOptions CreateJson()
+    {
+        var options = new JsonSerializerOptions(AIJsonUtilities.DefaultOptions);
+        options.Converters.Insert(0, new TolerantEnumConverterFactory());
+        options.MakeReadOnly(populateMissingResolver: true);
+        return options;
+    }
+
     private static AIFunction Make(Delegate method, string name) =>
-        AIFunctionFactory.Create(method, new AIFunctionFactoryOptions { Name = name });
+        AIFunctionFactory.Create(method, new AIFunctionFactoryOptions { Name = name, SerializerOptions = Json });
 }
 

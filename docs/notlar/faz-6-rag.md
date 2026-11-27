@@ -34,3 +34,15 @@
 - At-least-once teslimatta işlemi idempotent yapmak; aynı mesaj iki kez gelirse ne olur?
 - Dead-letter kuyruğundaki mesajlar nasıl yeniden işlenir?
 - Prompt injection'a karşı neden tek bir önlem yetmez?
+
+## Gerçek modelle bulgular (qwen2.5:7b, Ollama, RTX 3060)
+| Bulgu | Etki | Çözüm |
+|---|---|---|
+| Model müşteri kimliği uyduruyordu (`musteriId: 123`) | Yanlış müşterinin verisi sorgulanabilirdi (yetki filtresi yine korur) | Araç artık ad/kod alıyor, müşteriyi sunucu çözüyor; çoklu eşleşmede adayları döndürüyor |
+| Enum'a Türkçe yazım (`"Açık"`) | Argüman bağlama hatası | `TolerantEnumConverterFactory` (aksan/büyük-küçük harf toleransı); şema değişmedi |
+| Tutarları bozuk biçimliyordu (`826.433.72`) | Okunmaz cevap | Araç çıktısında tutarlar hazır biçimli (`826.433,72 TL`) |
+| Doküman aramasında gereksiz departman filtresi | Doğru doküman kaçırıldı, yanlış parçadan cevap uyduruldu | `departman` parametresi kaldırıldı; kapsam yalnızca kullanıcının yetkisi |
+| Bir koşuda gömülü talimata uyup başka araç çağırdı | Davranış ihlali | `InjectionGuard` ile talimat cümleleri modele gitmeden gizleniyor |
+| "...notuna göre" gibi dolaylı doküman sorularında aramayı başlatmayıp netleştirme isteyebiliyor | Kullanıcı tekrar sormak zorunda | Açık bir zayıflık; daha büyük model (ör. `Ai__Provider=Anthropic`) veya sorgu sınıflandırıcı ile iyileşir |
+
+Son durum: araç seçimi 29/30 (%97, `docs/ai-eval-results.md`), injection değerlendirmesi 3/3 koşuda geçti.

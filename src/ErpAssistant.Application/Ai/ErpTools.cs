@@ -56,9 +56,9 @@ public sealed class ErpTools(
             {
                 donem = $"{from:yyyy-MM-dd} / {to:yyyy-MM-dd}",
                 siparisSayisi = s.OrderCount,
-                toplamCiroTL = s.Revenue,
-                ortalamaSiparisTL = s.AverageOrderValue,
-                gruplar = s.Rows.Select(r => new { ad = r.Label, siparis = r.OrderCount, ciroTL = r.Revenue }),
+                toplamCiro = TL(s.Revenue),
+                ortalamaSiparis = TL(s.AverageOrderValue),
+                gruplar = s.Rows.Select(r => new { ad = r.Label, siparis = r.OrderCount, ciro = TL(r.Revenue) }),
                 kesildi = s.Truncated,
             };
             return (result, s.Rows.Count);
@@ -95,7 +95,7 @@ public sealed class ErpTools(
                 urunler = rows.Select(r => new
                 {
                     sira = r.Rank, urunId = r.ProductId, sku = r.Sku, ad = r.Name, kategori = r.Category, miktar = r.Quantity,
-                    ciroTL = financial ? r.Revenue : (decimal?)null,
+                    ciro = financial ? TL(r.Revenue) : null,
                 }),
             };
             return (result, rows.Count);
@@ -124,18 +124,17 @@ public sealed class ErpTools(
             return (result, rows.Count);
         });
 
-    [Description("Bir müşterinin siparişlerini listeler (en yeni önce). Açık sipariş = taslak veya onaylı, henüz sevk edilmemiş. " +
-                 "musteriId mutlaka bu konuşmada musteri_ara sonucundan alınmış olmalı; kimliği asla tahmin etme.")]
+    [Description("Bir müşterinin siparişlerini listeler (en yeni önce). Müşteri adı, adının bir kısmı veya kodu verilir; " +
+                 "sunucu müşteriyi bulur. Açık sipariş = taslak veya onaylı, henüz sevk edilmemiş.")]
     public Task<object> MusteriSiparisleri(
-        [Description("Müşteri kimliği (musteri_ara ile bulunur)")] int musteriId,
+        [Description("Müşteri adı, adının ayırt edici kısmı (ör. 'Kahveci') veya kodu (ör. 'M-0012')")] string musteri,
         [Description("Durum filtresi: Acik, Tum, Taslak, Onayli, SevkEdildi, TeslimEdildi, Iptal")] SiparisDurumu durum = SiparisDurumu.Acik,
         [Description("En fazla kaç sipariş (1-20)")] int n = 10) =>
-        recorder.RunAsync("musteri_siparisleri", new { musteriId, durum, n }, async () =>
+        recorder.RunAsync("musteri_siparisleri", new { musteri, durum, n }, async () =>
         {
             if (n is < 1 or > MaxRows) throw new ToolArgumentException($"n 1 ile {MaxRows} arasında olmalı.");
-            var customer = await db.Customers.AsNoTracking().Where(c => c.Id == musteriId)
-                .Select(c => new { c.Id, c.Name }).FirstOrDefaultAsync()
-                ?? throw new ToolArgumentException("Müşteri bulunamadı veya bu müşteriyi görme yetkiniz yok.");
+            var customer = await ResolveCustomerAsync(musteri);
+            var musteriId = customer.Id;
 
             var query = new OrderQuery
             {
@@ -161,7 +160,7 @@ public sealed class ErpTools(
                 siparisler = page.Items.Select(o => new
                 {
                     siparisId = o.Id, no = o.OrderNumber, tarih = o.OrderDate.ToString("yyyy-MM-dd"), durum = o.Status.ToString(),
-                    tutarTL = o.TotalAmount, kalem = o.LineCount, depo = o.WarehouseCode,
+                    tutar = o.TotalAmount is { } t ? TL(t) : null, kalem = o.LineCount, depo = o.WarehouseCode,
                 }),
             };
             return (result, page.Items.Count);
@@ -199,25 +198,64 @@ public sealed class ErpTools(
     [Description("Vadesi geçmiş, tamamen ödenmemiş faturaları (geciken tahsilatları) listeler.")]
     public Task<object> GecikenTahsilatlar(
         [Description("En az kaç gün gecikmiş olsun (0 = vadesi geçen tümü)")] int gun = 0,
-        [Description("İsteğe bağlı müşteri kimliği")] int? musteriId = null) =>
-        recorder.RunAsync("geciken_tahsilatlar", new { gun, musteriId }, async () =>
+        [Description("İsteğe bağlı müşteri adı veya kodu; yalnızca soru belirli bir müşteriyle ilgiliyse")] string? musteri = null) =>
+        recorder.RunAsync("geciken_tahsilatlar", new { gun, musteri }, async () =>
         {
             if (gun is < 0 or > 3650) throw new ToolArgumentException("gun 0 ile 3650 arasında olmalı.");
+            int? musteriId = string.IsNullOrWhiteSpace(musteri) ? null : (await ResolveCustomerAsync(musteri)).Id;
             var s = await reports.OverdueInvoicesAsync(gun, musteriId, CancellationToken.None);
             var rows = s.Rows.Take(MaxRows).ToList();
             var result = new
             {
                 faturaSayisi = s.InvoiceCount,
-                toplamKalanTL = s.TotalOutstanding,
+                toplamKalan = TL(s.TotalOutstanding),
                 gosterilen = rows.Count,
                 faturalar = rows.Select(r => new
                 {
                     no = r.InvoiceNumber, musteriId = r.CustomerId, musteri = r.CustomerName, temsilci = r.SalesRepresentative,
-                    vade = r.DueDate.ToString("yyyy-MM-dd"), gecikmeGun = r.DaysOverdue, kalanTL = r.Outstanding,
+                    vade = r.DueDate.ToString("yyyy-MM-dd"), gecikmeGun = r.DaysOverdue, kalan = TL(r.Outstanding),
                 }),
             };
             return (result, rows.Count);
         });
+
+    private static readonly CultureInfo Tr = CultureInfo.GetCultureInfo("tr-TR");
+
+    /// <summary>
+    /// Müşteriyi addan/koddan sunucuda çözer. Model kimlik uydurmaz; tek eşleşme yoksa açıklayıcı hata döner
+    /// (birden fazlaysa adayları listeler, model kullanıcıya sorar).
+    /// </summary>
+    private async Task<(int Id, string Name)> ResolveCustomerAsync(string term)
+    {
+        term = term?.Trim() ?? "";
+        if (term.Length is < 2 or > 100) throw new ToolArgumentException("Müşteri adı 2-100 karakter olmalı.");
+
+        var exact = await db.Customers.AsNoTracking()
+            .Where(c => c.Code == term || c.Name == term)
+            .Select(c => new { c.Id, c.Name }).FirstOrDefaultAsync();
+        if (exact is not null) return (exact.Id, exact.Name);
+
+        // "Kahveci Endüstri'nin" gibi ekli ifadelerde ilk kelimeyle de dener.
+        var firstWord = term.Split([' ', '\'', '’'], StringSplitOptions.RemoveEmptyEntries)[0];
+        var matches = await db.Customers.AsNoTracking()
+            .Where(c => c.Name.Contains(term) || c.Name.Contains(firstWord))
+            .OrderBy(c => c.Name).Take(6)
+            .Select(c => new { c.Id, c.Name, c.Code }).ToListAsync();
+
+        return matches.Count switch
+        {
+            0 => throw new ToolArgumentException($"'{term}' ile eşleşen müşteri yok veya bu müşteriyi görme yetkiniz yok."),
+            1 => (matches[0].Id, matches[0].Name),
+            _ when matches.Count(m => m.Name.StartsWith(term, StringComparison.CurrentCultureIgnoreCase)) == 1 =>
+                matches.Where(m => m.Name.StartsWith(term, StringComparison.CurrentCultureIgnoreCase)).Select(m => (m.Id, m.Name)).Single(),
+            _ => throw new ToolArgumentException(
+                $"'{term}' birden fazla müşteriyle eşleşti: {string.Join("; ", matches.Select(m => $"{m.Name} ({m.Code})"))}. " +
+                "Kullanıcıya hangisini kastettiğini sor."),
+        };
+    }
+
+    /// <summary>Tutar, modelin olduğu gibi aktarabileceği biçimde: "1.234.567,89 TL".</summary>
+    private static string TL(decimal value) => value.ToString("#,##0.00", Tr) + " TL";
 
     private (DateTime From, DateTime To) Range(string from, string to)
     {

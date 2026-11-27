@@ -1,6 +1,5 @@
 using System.ComponentModel;
 using ErpAssistant.Application.Abstractions;
-using ErpAssistant.Domain.Organization;
 
 namespace ErpAssistant.Application.Ai;
 
@@ -16,30 +15,29 @@ public interface IDocumentSearch
 public sealed class DocumentTools(IDocumentSearch search, ICurrentUser user, ToolCallRecorder recorder)
 {
     public const int TopK = 5;
+    public const double SourceScoreWindow = 0.08;
 
     [Description("Yüklenen şirket dokümanlarında (şartname, prosedür, politika, sözleşme, katalog) anlamsal arama yapar ve " +
                  "en ilgili metin parçalarını doküman adı ve sayfa numarasıyla döndürür.")]
     public Task<object> DokumandaAra(
-        [Description("Aranacak soru veya konu, doğal dille")] string soru,
-        [Description("İsteğe bağlı departman kodu: SATIS, DEPO, KALITE veya YONETIM")] string? departman = null) =>
-        recorder.RunAsync("dokumanda_ara", new { soru, departman }, async () =>
+        [Description("Aranacak soru veya konu, doğal dille")] string soru) =>
+        recorder.RunAsync("dokumanda_ara", new { soru }, async () =>
         {
             if (string.IsNullOrWhiteSpace(soru) || soru.Length > 500)
                 throw new ToolArgumentException("Soru 1-500 karakter olmalı.");
-            if (departman is not null && !DepartmentCodes.All.Contains(departman))
-                throw new ToolArgumentException("Departman SATIS, DEPO, KALITE veya YONETIM olmalı.");
-
-            // Kullanıcının erişebildiği departmanlar ile istenen departmanın kesişimi.
-            var allowed = user.DepartmentCodes;
-            IReadOnlyCollection<string>? scope = departman is null
-                ? allowed
-                : allowed is null || allowed.Contains(departman) ? [departman] : [];
+            // Arama kapsamı yalnızca kullanıcının erişebildiği departmanlar (null = hepsi). Model kapsamı daraltamaz
+            // ya da genişletemez; küçük modeller gereksiz departman filtresiyle doğru dokümanı kaçırıyordu.
+            var scope = user.DepartmentCodes;
 
             var hits = scope is { Count: 0 }
                 ? []
                 : (await search.SearchAsync(soru, scope, TopK, CancellationToken.None)).ToList();
 
-            recorder.AddSources(hits.Select(h => new DocumentSource(h.DocumentId, h.FileName, h.PageNumber, Math.Round(h.Score, 3))));
+            // Kaynak olarak yalnızca en iyi eşleşmeye yakın parçalar gösterilir; zayıf eşleşmeler modele gider ama
+            // kullanıcıya "kaynak" diye sunulmaz.
+            var best = hits.Count == 0 ? 0 : hits.Max(h => h.Score);
+            recorder.AddSources(hits.Where(h => h.Score >= best - SourceScoreWindow)
+                .Select(h => new DocumentSource(h.DocumentId, h.FileName, h.PageNumber, Math.Round(h.Score, 3))));
 
             var cleaned = hits.Select(h => (Hit: h, Guard: InjectionGuard.Sanitize(h.Text))).ToList();
             var redacted = cleaned.Sum(c => c.Guard.Redacted);

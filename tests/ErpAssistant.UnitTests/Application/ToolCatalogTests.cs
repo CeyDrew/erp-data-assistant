@@ -54,8 +54,8 @@ public class AssistantPromptTests
     {
         var prompt = AssistantPrompt.Build(new User(), new DateTime(2026, 3, 15));
 
-        prompt.Should().Contain("geçen ay: 2026-02-01 → 2026-02-28");
-        prompt.Should().Contain("bu yıl: 2026-01-01 → 2026-03-15");
+        prompt.Should().Contain("| geçen ay (Şubat 2026) | 2026-02-01 | 2026-02-28 |");
+        prompt.Should().Contain("| bu yıl (2026) | 2026-01-01 | 2026-03-15 |");
         prompt.Should().Contain("Satış temsilcisi");
         prompt.Should().Contain("VERİDİR");
     }
@@ -90,5 +90,34 @@ public class InjectionGuardTests
     {
         const string text = "Palet yüksekliği en fazla 1,80 metredir. Satış temsilcisi %10'a kadar iskonto verebilir.";
         InjectionGuard.Sanitize(text).Should().Be(new InjectionGuard.Result(text, 0));
+    }
+}
+
+public class TolerantEnumTests
+{
+    private static readonly System.Text.Json.JsonSerializerOptions Options = new() { Converters = { new TolerantEnumConverterFactory() } };
+
+    [Theory]
+    [InlineData("\"Açık\"", SiparisDurumu.Acik)]
+    [InlineData("\"TESLİM EDİLDİ\"", SiparisDurumu.TeslimEdildi)]
+    [InlineData("\"sevk_edildi\"", SiparisDurumu.SevkEdildi)]
+    public void Turkish_spellings_bind_to_enum(string json, SiparisDurumu expected)
+    {
+        System.Text.Json.JsonSerializer.Deserialize<SiparisDurumu>(json, Options).Should().Be(expected);
+    }
+
+    [Fact]
+    public void Unknown_value_lists_valid_options()
+    {
+        var act = () => System.Text.Json.JsonSerializer.Deserialize<SiparisDurumu>("\"Bekliyor\"", Options);
+        act.Should().Throw<System.Text.Json.JsonException>().WithMessage("*Acik*");
+    }
+
+    [Fact]
+    public void Schema_still_lists_enum_values()
+    {
+        var tool = ErpToolCatalog.Create(new ErpTools(null!, null!, null!, null!, ErpAssistant.Application.Abstractions.SystemUser.Instance,
+            TimeProvider.System, new ToolCallRecorder())).Single(t => t.Name == "musteri_siparisleri");
+        tool.JsonSchema.GetRawText().Should().Contain("TeslimEdildi");
     }
 }

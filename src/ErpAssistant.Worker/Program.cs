@@ -1,6 +1,7 @@
 using ErpAssistant.Application;
 using ErpAssistant.Application.Abstractions;
 using ErpAssistant.Infrastructure;
+using ErpAssistant.Infrastructure.Ai;
 using ErpAssistant.Infrastructure.Documents;
 using Serilog;
 
@@ -16,6 +17,7 @@ builder.Services.AddSerilog((services, configuration) => configuration
 builder.Services.AddSingleton<ICurrentUser>(SystemUser.Instance);
 builder.Services.AddApplication();
 builder.Services.AddInfrastructure(builder.Configuration);
+builder.Services.AddAi(builder.Configuration);
 builder.Services.AddDocumentPipeline(builder.Configuration).AddDocumentProcessing();
 
 await builder.Build().RunAsync();

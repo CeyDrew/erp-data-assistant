@@ -71,10 +71,10 @@ public sealed class AssistantTests(ErpApiFactory factory)
         var foreign = all.Items.First(c => c.SalesRepresentativeId != me.SalesRepresentativeId);
         var own = all.Items.First(c => c.SalesRepresentativeId == me.SalesRepresentativeId);
 
-        var denied = await rep.AskAsync($$"""TOOL:musteri_siparisleri:{"musteriId":{{foreign.Id}},"durum":"Tum"}""");
-        var allowed = await rep.AskAsync($$"""TOOL:musteri_siparisleri:{"musteriId":{{own.Id}},"durum":"Tum"}""");
+        var denied = await rep.AskAsync($$"""TOOL:musteri_siparisleri:{"musteri":"{{foreign.Code}}","durum":"Tum"}""");
+        var allowed = await rep.AskAsync($$"""TOOL:musteri_siparisleri:{"musteri":"{{own.Code}}","durum":"Tum"}""");
 
-        denied.First(e => e.Type == "tool_result").Data.GetProperty("error").GetString().Should().Contain("yetkiniz yok");
+        denied.First(e => e.Type == "tool_result").Data.GetProperty("error").GetString().Should().Contain("görme yetkiniz yok");
         allowed.First(e => e.Type == "tool_result").Data.GetProperty("error").ValueKind.Should().Be(System.Text.Json.JsonValueKind.Null);
     }
 
