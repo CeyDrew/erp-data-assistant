@@ -5,13 +5,16 @@ const number = new Intl.NumberFormat("tr-TR");
 const date = new Intl.DateTimeFormat("tr-TR", { day: "2-digit", month: "short", year: "numeric" });
 const dateTime = new Intl.DateTimeFormat("tr-TR", { dateStyle: "medium", timeStyle: "short" });
 
+// API tarihleri UTC tutar ama saat dilimi eki olmadan döner; yerel saate çevirmek için UTC olarak oku.
+const parse = (v: string) => new Date(/[zZ]|[+-]dd:dd$/.test(v) ? v : `${v}Z`);
+
 export const fmt = {
   money: (v: number | null | undefined) => (v == null ? "—" : currency.format(v)),
   moneyExact: (v: number | null | undefined) => (v == null ? "—" : currencyExact.format(v)),
   compact: (v: number) => compact.format(v),
   number: (v: number) => number.format(v),
-  date: (v: string | null | undefined) => (v ? date.format(new Date(v)) : "—"),
-  dateTime: (v: string | null | undefined) => (v ? dateTime.format(new Date(v)) : "—"),
+  date: (v: string | null | undefined) => (v ? date.format(parse(v)) : "—"),
+  dateTime: (v: string | null | undefined) => (v ? dateTime.format(parse(v)) : "—"),
   percent: (v: number) => `%${number.format(Math.round(v * 1000) / 10)}`,
 };
 

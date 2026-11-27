@@ -33,7 +33,7 @@ public sealed class ScriptedChatClient : IChatClient
             yield break;
         }
 
-        var text = last.Text;
+        var text = last.Text.Split("\n\n")[0]; // sunucunun eklediği yönlendirme notunu atla
         if (text.StartsWith("TOOL:", StringComparison.Ordinal))
         {
             var parts = text.Split(':', 3);

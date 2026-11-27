@@ -61,6 +61,11 @@ services:
 
   ollama:
     image: ollama/ollama:latest
+    environment:
+      # Sohbet ve embedding modeli birlikte bellekte kalsın; aksi halde her doküman sorusunda model değişimi
+      # birkaç saniye ekliyor (Aspire izinde görüldü).
+      OLLAMA_MAX_LOADED_MODELS: "2"
+      OLLAMA_KEEP_ALIVE: 30m
     ports:
       - "11434:11434"
     volumes:

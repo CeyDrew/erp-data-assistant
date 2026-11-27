@@ -13,7 +13,7 @@ namespace ErpAssistant.Application.Ai;
 /// Soru → (araç çağrıları) → cevap akışı. Araç döngüsünü <see cref="FunctionInvokingChatClient"/> yürütür;
 /// bu sınıf akışı olaylara çevirir ve her soruyu günlüğe yazar.
 /// </summary>
-public sealed class AssistantService(
+public sealed partial class AssistantService(
     IChatClient chat,
     ErpTools tools,
     ToolCallRecorder recorder,
@@ -33,7 +33,13 @@ public sealed class AssistantService(
         var messages = new List<ChatMessage> { new(ChatRole.System, AssistantPrompt.Build(user, today)) };
         foreach (var turn in request.History ?? [])
             messages.Add(new ChatMessage(turn.Role == "assistant" ? ChatRole.Assistant : ChatRole.User, turn.Content));
-        messages.Add(new ChatMessage(ChatRole.User, request.Message));
+        // Küçük modeller doküman sorularını bazen aramadan "bulamadım" diye cevaplıyor. Anahtar kelimeye dayalı
+        // basit bir yönlendirme notu bunu gideriyor (model yine de aracı kendi seçer). Not, ayrı bir sistem mesajı
+        // yerine kullanıcı mesajına eklenir: sondaki sistem mesajı bazı modellerin sohbet şablonunu bozuyor.
+        var question = documents is not null && DocumentHint.IsMatch(request.Message)
+            ? request.Message + "\n\n(Not: bu soru şirket dokümanlarıyla ilgili; önce dokumanda_ara aracını kullan.)"
+            : request.Message;
+        messages.Add(new ChatMessage(ChatRole.User, question));
 
         var options = new ChatOptions
         {
@@ -120,4 +126,9 @@ public sealed class AssistantService(
 
         yield return new DoneEvent(log.Id, log.DurationMs, log.InputTokens, log.OutputTokens, log.Model!);
     }
+
+    [System.Text.RegularExpressions.GeneratedRegex(
+        @"şartname|prosedür|politika|yönetmelik|sözleşme|talimat|doküman|belge|kalite notu|garanti|iade|katalog",
+        System.Text.RegularExpressions.RegexOptions.IgnoreCase | System.Text.RegularExpressions.RegexOptions.CultureInvariant)]
+    private static partial System.Text.RegularExpressions.Regex DocumentHint { get; }
 }
