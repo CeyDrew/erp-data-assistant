@@ -1,0 +1,15 @@
+<Solution>
+  <Folder Name="/src/">
+    <Project Path="src/ErpAssistant.Api/ErpAssistant.Api.csproj" />
+    <Project Path="src/ErpAssistant.Application/ErpAssistant.Application.csproj" />
+    <Project Path="src/ErpAssistant.Domain/ErpAssistant.Domain.csproj" />
+    <Project Path="src/ErpAssistant.Infrastructure/ErpAssistant.Infrastructure.csproj" />
+    <Project Path="src/ErpAssistant.Mcp/ErpAssistant.Mcp.csproj" />
+    <Project Path="src/ErpAssistant.Worker/ErpAssistant.Worker.csproj" />
+  </Folder>
+  <Folder Name="/tests/">
+    <Project Path="tests/ErpAssistant.AiEvals/ErpAssistant.AiEvals.csproj" />
+    <Project Path="tests/ErpAssistant.IntegrationTests/ErpAssistant.IntegrationTests.csproj" />
+    <Project Path="tests/ErpAssistant.UnitTests/ErpAssistant.UnitTests.csproj" />
+  </Folder>
+</Solution>
