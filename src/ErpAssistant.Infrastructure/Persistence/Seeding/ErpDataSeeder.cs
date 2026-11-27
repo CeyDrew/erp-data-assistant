@@ -118,13 +118,15 @@ public sealed class ErpDataSeeder(
             do name = $"{stem} {faker.Random.Replace("??-###").ToUpperInvariant()}";
             while (!usedNames.Add(name));
 
-            var cost = Math.Round(faker.Random.Decimal(15, 4_500), 2);
+            // Log-uniform fiyat: ucuz ürün çok, pahalı ürün az. Metreyle satılanlar metre fiyatıdır.
+            var unit = category.Name is "Kablo" or "Hidrolik Hortum" ? "metre" : "adet";
+            var cost = unit == "metre" ? LogUniform(faker, 8, 180) : LogUniform(faker, 12, 3_000);
             products.Add(new Product
             {
                 Sku = $"SKU-{i + 1:D5}",
                 Name = name,
                 Category = category,
-                Unit = category.Name is "Kablo" or "Hidrolik Hortum" ? "metre" : "adet",
+                Unit = unit,
                 UnitCost = cost,
                 UnitPrice = Math.Round(cost * faker.Random.Decimal(1.18m, 1.65m), 2),
                 ReorderLevel = faker.Random.Int(10, 120),
@@ -204,7 +206,9 @@ public sealed class ErpDataSeeder(
             {
                 var product = productPicker.Pick(faker.Random);
                 if (!chosen.Add(product.Id)) continue;
-                var qty = product.Unit == "metre" ? faker.Random.Int(10, 400) : faker.Random.Int(1, 60);
+                var qty = product.Unit == "metre"
+                    ? faker.Random.Int(1, 30) * 10
+                    : product.UnitPrice > 1_000 ? faker.Random.Int(1, 8) : faker.Random.Int(2, 50);
                 var discount = faker.Random.WeightedRandom([0m, 0.05m, 0.10m, 0.15m], [0.6f, 0.2f, 0.15f, 0.05f]);
                 order.AddLine(product, qty, discount);
             }
@@ -243,6 +247,9 @@ public sealed class ErpDataSeeder(
         db.ChangeTracker.AutoDetectChangesEnabled = true;
         logger.LogInformation("Tohumlama tamamlandı: {Orders} sipariş, {Elapsed:n1} sn", o.Orders, sw.Elapsed.TotalSeconds);
     }
+
+    private static decimal LogUniform(Faker faker, double min, double max) =>
+        Math.Round((decimal)Math.Exp(faker.Random.Double(Math.Log(min), Math.Log(max))), 2);
 
     private static DateTime PickOrderDate(Faker faker, DateTime start, int totalDays)
     {

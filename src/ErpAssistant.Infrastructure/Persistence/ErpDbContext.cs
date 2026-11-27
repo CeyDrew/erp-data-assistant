@@ -31,6 +31,9 @@ public class ErpDbContext(DbContextOptions<ErpDbContext> options) : DbContext(op
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
         base.OnModelCreating(modelBuilder);
+
+        // Türkçe büyük/küçük harf duyarsız arama: "istanbul" = "İSTANBUL", "ışık" = "IŞIK".
+        modelBuilder.UseCollation("Turkish_CI_AS");
         modelBuilder.ApplyConfigurationsFromAssembly(typeof(ErpDbContext).Assembly);
     }
 
