@@ -34,7 +34,8 @@ public sealed class ErpTools(
     private const int MaxRangeDays = 3 * 366;
 
     [Description("Belirli bir tarih aralığındaki satışların (ciro ve sipariş sayısı) özetini verir. " +
-                 "Ciro KDV hariçtir; taslak ve iptal siparişler dahil edilmez.")]
+                 "Ciro KDV hariçtir; taslak ve iptal siparişler dahil edilmez. grupla=Musteri en çok ciro yapan müşterileri, " +
+                 "grupla=Temsilci temsilci performansını, grupla=Kategori kategori dağılımını sıralı verir.")]
     public Task<object> SatisOzeti(
         [Description("Başlangıç tarihi, yyyy-MM-dd")] string baslangic,
         [Description("Bitiş tarihi (dahil), yyyy-MM-dd")] string bitis,
@@ -100,8 +101,8 @@ public sealed class ErpTools(
             return (result, rows.Count);
         });
 
-    [Description("Müşteriyi adına, koduna veya vergi numarasına göre arar; müşteri kimliğini (musteriId) bulmak için " +
-                 "diğer müşteri araçlarından önce kullanılır.")]
+    [Description("Belirli bir müşteriyi adına, koduna veya vergi numarasına göre arar ve musteriId döndürür. " +
+                 "Soruda bir müşteri adı geçiyorsa ilk çağrılacak araç budur. Müşteri sıralaması için değil, tek müşteri bulmak içindir.")]
     public Task<object> MusteriAra(
         [Description("Müşteri adı veya adının bir kısmı, kodu (M-0012) ya da vergi numarası")] string arama) =>
         recorder.RunAsync("musteri_ara", new { arama }, async () =>
@@ -123,7 +124,8 @@ public sealed class ErpTools(
             return (result, rows.Count);
         });
 
-    [Description("Bir müşterinin siparişlerini listeler (en yeni önce). Açık sipariş = taslak veya onaylı, henüz sevk edilmemiş.")]
+    [Description("Bir müşterinin siparişlerini listeler (en yeni önce). Açık sipariş = taslak veya onaylı, henüz sevk edilmemiş. " +
+                 "musteriId mutlaka bu konuşmada musteri_ara sonucundan alınmış olmalı; kimliği asla tahmin etme.")]
     public Task<object> MusteriSiparisleri(
         [Description("Müşteri kimliği (musteri_ara ile bulunur)")] int musteriId,
         [Description("Durum filtresi: Acik, Tum, Taslak, Onayli, SevkEdildi, TeslimEdildi, Iptal")] SiparisDurumu durum = SiparisDurumu.Acik,

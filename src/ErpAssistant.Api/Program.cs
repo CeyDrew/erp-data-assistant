@@ -5,6 +5,7 @@ using ErpAssistant.Api.Infrastructure;
 using ErpAssistant.Application;
 using ErpAssistant.Infrastructure;
 using ErpAssistant.Infrastructure.Ai;
+using ErpAssistant.Infrastructure.Documents;
 using ErpAssistant.Infrastructure.Persistence;
 using Scalar.AspNetCore;
 using Serilog;
@@ -26,6 +27,8 @@ try
     builder.Services.AddApplication();
     builder.Services.AddInfrastructure(builder.Configuration);
     builder.Services.AddAi(builder.Configuration);
+    builder.Services.AddDocumentPipeline(builder.Configuration);
+    builder.Services.AddHostedService<SampleDocumentImporter>();
     builder.Services.AddJwtAuthentication(builder.Configuration);
     builder.Services.AddAuthorization(Policies.Configure);
 

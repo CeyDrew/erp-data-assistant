@@ -39,6 +39,12 @@ public sealed class ToolCallRecorder
             _calls.Add(new ToolCallRecord(callId, name, args, 0, sw.ElapsedMilliseconds, ex.Message));
             return new { hata = ex.Message };
         }
+        catch (Exception ex) when (ex is not OperationCanceledException)
+        {
+            // Beklenmeyen hata: ayrıntı modele sızmaz, günlükte kalır.
+            _calls.Add(new ToolCallRecord(callId, name, args, 0, sw.ElapsedMilliseconds, $"Beklenmeyen hata: {ex.GetType().Name}"));
+            throw;
+        }
     }
 
     internal void AddSources(IEnumerable<DocumentSource> sources) => _sources.AddRange(sources);

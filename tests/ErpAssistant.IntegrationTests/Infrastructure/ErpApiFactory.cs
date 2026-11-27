@@ -4,7 +4,11 @@ using Microsoft.AspNetCore.TestHost;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.AspNetCore.Mvc.Testing;
 using Microsoft.Data.SqlClient;
+using ErpAssistant.Infrastructure.Documents;
+using RabbitMQ.Client;
 using Testcontainers.MsSql;
+using Testcontainers.Qdrant;
+using Testcontainers.RabbitMq;
 
 namespace ErpAssistant.IntegrationTests.Infrastructure;
 
@@ -18,6 +22,10 @@ public sealed class ErpApiFactory : WebApplicationFactory<Program>, IAsyncLifeti
         .WithImage("mcr.microsoft.com/mssql/server:2022-latest")
         .Build();
 
+    private readonly RabbitMqContainer _rabbit = new RabbitMqBuilder().WithImage("rabbitmq:4-management").Build();
+    private readonly QdrantContainer _qdrant = new QdrantBuilder().WithImage("qdrant/qdrant:v1.15.4").Build();
+    private readonly string _storage = Path.Combine(Path.GetTempPath(), "erp-tests-" + Guid.NewGuid().ToString("N"));
+
     private string _connectionString = "";
 
     /// <summary>Yönetici olarak oturum açmış istemci.</summary>
@@ -25,7 +33,7 @@ public sealed class ErpApiFactory : WebApplicationFactory<Program>, IAsyncLifeti
 
     public async Task InitializeAsync()
     {
-        await _sql.StartAsync();
+        await Task.WhenAll(_sql.StartAsync(), _rabbit.StartAsync(), _qdrant.StartAsync());
         _connectionString = new SqlConnectionStringBuilder(_sql.GetConnectionString())
         {
             InitialCatalog = "ErpAssistantTests",
@@ -35,6 +43,14 @@ public sealed class ErpApiFactory : WebApplicationFactory<Program>, IAsyncLifeti
         // Host'u şimdi kurarak migration ve tohumlamanın testlerden önce bitmesini sağlıyoruz.
         _ = Services;
         Admin = await this.CreateClientAsAsync(DemoUsers.Admin);
+    }
+
+    public async Task<uint> DeadLetterCountAsync()
+    {
+        var factory = new ConnectionFactory { Uri = new Uri(_rabbit.GetConnectionString()) };
+        await using var connection = await factory.CreateConnectionAsync();
+        await using var channel = await connection.CreateChannelAsync();
+        return (await channel.QueueDeclarePassiveAsync("documents.dead")).MessageCount;
     }
 
     protected override void ConfigureWebHost(IWebHostBuilder builder)
@@ -49,13 +65,27 @@ public sealed class ErpApiFactory : WebApplicationFactory<Program>, IAsyncLifeti
         builder.UseSetting("Serilog:MinimumLevel:Default", "Warning");
         builder.UseSetting("RateLimiting:AuthPerMinute", "10000");
         builder.UseSetting("RateLimiting:ChatPerMinute", "10000");
-        builder.ConfigureTestServices(s => s.AddSingleton<IChatClientFactory, ScriptedChatClientFactory>());
+        builder.UseSetting("RabbitMq:Uri", _rabbit.GetConnectionString());
+        builder.UseSetting("RabbitMq:RetryDelayMs", "300");
+        builder.UseSetting("Qdrant:Host", _qdrant.Hostname);
+        builder.UseSetting("Qdrant:Port", _qdrant.GetMappedPublicPort(6334).ToString());
+        builder.UseSetting("Qdrant:MinScore", "0.2");
+        builder.UseSetting("Storage:Path", _storage);
+        builder.UseSetting("SampleDocuments:Path", "");
+        builder.ConfigureTestServices(s =>
+        {
+            s.AddSingleton<IChatClientFactory, ScriptedChatClientFactory>();
+            s.AddSingleton<IEmbeddingGeneratorFactory, HashingEmbeddingFactory>();
+            // Worker süreci yerine tüketici aynı test host'unda çalışır.
+            s.AddDocumentProcessing();
+        });
     }
 
     public new async Task DisposeAsync()
     {
         await base.DisposeAsync();
-        await _sql.DisposeAsync();
+        await Task.WhenAll(_sql.DisposeAsync().AsTask(), _rabbit.DisposeAsync().AsTask(), _qdrant.DisposeAsync().AsTask());
+        try { Directory.Delete(_storage, true); } catch (IOException) { }
     }
 }
 
